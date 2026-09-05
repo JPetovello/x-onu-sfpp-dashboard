@@ -8,6 +8,8 @@ import requests
 import urllib3
 from flask import Flask, jsonify, render_template, request
 
+from advanced import AdvancedCollector
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
@@ -419,5 +421,50 @@ def api_info():
     })
 
 
+@app.route("/api/advanced/current")
+def api_advanced_current():
+
+    return jsonify(
+        advanced_collector.snapshot()
+    )
+
+
+@app.route("/api/advanced/history")
+def api_advanced_history():
+
+    range_name = request.args.get(
+        "range",
+        "24h",
+    )
+
+    return jsonify(
+        advanced_collector.history(
+            range_name
+        )
+    )
+
+
+@app.route("/api/advanced/stats")
+def api_advanced_stats():
+
+    range_name = request.args.get(
+        "range",
+        "24h",
+    )
+
+    return jsonify(
+        advanced_collector.stats(
+            range_name
+        )
+    )
+
+
 init_db()
+
+advanced_collector = AdvancedCollector(
+    DB_PATH,
+    RETENTION_DAYS,
+)
+
 start_collector()
+advanced_collector.start()

@@ -1,12 +1,50 @@
 let selectedRange = "24h";
-let lastHistoryRefresh = 0;
+
+let latestCore = null;
+let latestAdvanced = null;
+let latestAdvancedStats = null;
+
+let coreHistory = [];
+let advancedHistory = [];
+
+
+function byId(id) {
+    return document.getElementById(id);
+}
+
+
+function setText(
+    id,
+    value
+) {
+    const element =
+        byId(id);
+
+    if (element) {
+        element.textContent =
+            value;
+    }
+}
+
+
+function setClass(
+    id,
+    className
+) {
+    const element =
+        byId(id);
+
+    if (element) {
+        element.className =
+            className;
+    }
+}
 
 
 function fmt(
     value,
     digits = 2
 ) {
-
     if (
         value === null ||
         value === undefined ||
@@ -25,26 +63,209 @@ function fmt(
 }
 
 
-function setText(
-    id,
+function fmtInteger(
     value
 ) {
+    if (
+        value === null ||
+        value === undefined ||
+        Number.isNaN(
+            Number(value)
+        )
+    ) {
+        return "-";
+    }
 
-    document
-        .getElementById(id)
-        .textContent = value;
+    return Math.round(
+        Number(value)
+    ).toLocaleString();
 }
 
 
-function setBadge(
+function fmtRate(
+    bitsPerSecond
+) {
+    const value =
+        Number(
+            bitsPerSecond
+        );
+
+    if (
+        !Number.isFinite(
+            value
+        )
+    ) {
+        return "-";
+    }
+
+    if (
+        value >=
+        1000000000
+    ) {
+        return (
+            value /
+            1000000000
+        ).toFixed(2) +
+        " Gbps";
+    }
+
+    if (
+        value >=
+        1000000
+    ) {
+        return (
+            value /
+            1000000
+        ).toFixed(2) +
+        " Mbps";
+    }
+
+    if (
+        value >=
+        1000
+    ) {
+        return (
+            value /
+            1000
+        ).toFixed(1) +
+        " Kbps";
+    }
+
+    return value.toFixed(0) +
+        " bps";
+}
+
+
+function fmtBytes(
+    bytes
+) {
+    const value =
+        Number(bytes);
+
+    if (
+        !Number.isFinite(
+            value
+        )
+    ) {
+        return "-";
+    }
+
+    const units = [
+        "B",
+        "KB",
+        "MB",
+        "GB",
+        "TB",
+        "PB"
+    ];
+
+    let result =
+        value;
+
+    let index = 0;
+
+    while (
+        result >= 1000 &&
+        index <
+        units.length - 1
+    ) {
+        result /= 1000;
+        index += 1;
+    }
+
+    const digits =
+        index <= 1
+            ? 0
+            : 2;
+
+    return result.toFixed(
+        digits
+    ) +
+    " " +
+    units[index];
+}
+
+
+function formatDuration(
+    seconds
+) {
+    const value =
+        Number(seconds);
+
+    if (
+        !Number.isFinite(
+            value
+        )
+    ) {
+        return "-";
+    }
+
+    const days =
+        Math.floor(
+            value /
+            86400
+        );
+
+    const hours =
+        Math.floor(
+            (
+                value %
+                86400
+            ) /
+            3600
+        );
+
+    const minutes =
+        Math.floor(
+            (
+                value %
+                3600
+            ) /
+            60
+        );
+
+    if (
+        days > 0
+    ) {
+        return `${days}d ${hours}h ${minutes}m`;
+    }
+
+    if (
+        hours > 0
+    ) {
+        return `${hours}h ${minutes}m`;
+    }
+
+    return `${minutes}m`;
+}
+
+
+function rangeLabel() {
+    const labels = {
+        "1h": "1h",
+        "6h": "6h",
+        "24h": "24h",
+        "7d": "7d",
+        "30d": "30d"
+    };
+
+    return labels[
+        selectedRange
+    ] || selectedRange;
+}
+
+
+function setHealthBadge(
     id,
     text,
     level
 ) {
-
     const element =
-        document
-            .getElementById(id);
+        byId(id);
+
+    if (!element) {
+        return;
+    }
 
     element.textContent =
         text;
@@ -55,11 +276,16 @@ function setBadge(
 }
 
 
-function rxStatus(value) {
+function rxStatus(
+    value
+) {
+    value =
+        Number(value);
 
     if (
-        value === null ||
-        value === undefined
+        !Number.isFinite(
+            value
+        )
     ) {
         return [
             "UNKNOWN",
@@ -103,11 +329,16 @@ function rxStatus(value) {
 }
 
 
-function txStatus(value) {
+function txStatus(
+    value
+) {
+    value =
+        Number(value);
 
     if (
-        value === null ||
-        value === undefined
+        !Number.isFinite(
+            value
+        )
     ) {
         return [
             "UNKNOWN",
@@ -157,35 +388,40 @@ function thermalStatus(
     cpu1,
     cpu2
 ) {
-
     const values = [
-        optic,
-        cpu1,
-        cpu2
+        Number(optic),
+        Number(cpu1),
+        Number(cpu2)
     ].filter(
         Number.isFinite
     );
 
-    if (!values.length) {
+    if (
+        !values.length
+    ) {
         return [
             "UNKNOWN",
             "unknown"
         ];
     }
 
-    const max =
+    const maximum =
         Math.max(
             ...values
         );
 
-    if (max >= 85) {
+    if (
+        maximum >= 85
+    ) {
         return [
             "HOT",
             "bad"
         ];
     }
 
-    if (max >= 75) {
+    if (
+        maximum >= 75
+    ) {
         return [
             "WARM",
             "warn"
@@ -199,240 +435,966 @@ function thermalStatus(
 }
 
 
-function formatDuration(
-    seconds
+function cleanPipeList(
+    value
 ) {
-
-    seconds =
-        Number(seconds) ||
-        0;
-
-    const days =
-        Math.floor(
-            seconds / 86400
-        );
-
-    const hours =
-        Math.floor(
-            (
-                seconds % 86400
-            ) / 3600
-        );
-
-    const minutes =
-        Math.floor(
-            (
-                seconds % 3600
-            ) / 60
-        );
-
-    if (days > 0) {
-        return `${days}d ${hours}h`;
+    if (!value) {
+        return "-";
     }
 
-    if (hours > 0) {
-        return `${hours}h ${minutes}m`;
-    }
-
-    return `${minutes}m`;
+    return String(value)
+        .split("|")
+        .map(
+            item =>
+                item.trim()
+        )
+        .filter(Boolean)
+        .join(" / ");
 }
 
 
-async function updateCurrent() {
+function updateCoreDisplay(
+    data
+) {
+    latestCore =
+        data;
 
+    const online =
+        Boolean(
+            data.online
+        );
+
+    setClass(
+        "statusDot",
+        "status-dot " +
+        (
+            online
+                ? "online"
+                : "offline"
+        )
+    );
+
+    setText(
+        "statusText",
+        online
+            ? "ONT ONLINE"
+            : "ONT UNREACHABLE"
+    );
+
+    setHealthBadge(
+        "summaryOnline",
+        online
+            ? "ONLINE"
+            : "OFFLINE",
+        online
+            ? "good"
+            : "bad"
+    );
+
+
+    if (
+        data.last_success
+    ) {
+        setText(
+            "lastUpdate",
+            "Last sample " +
+            new Date(
+                data.last_success
+            ).toLocaleString()
+        );
+    } else if (
+        data.last_error
+    ) {
+        setText(
+            "lastUpdate",
+            data.last_error
+        );
+    }
+
+
+    setText(
+        "dashboardUptime",
+        formatDuration(
+            data.dashboard_uptime_seconds
+        )
+    );
+
+
+    const metrics =
+        data.metrics;
+
+    if (!metrics) {
+        updateOverallHealth();
+        return;
+    }
+
+
+    setText(
+        "rxPower",
+        fmt(
+            metrics.rx_power_dBm
+        )
+    );
+
+    setText(
+        "txPower",
+        fmt(
+            metrics.tx_power_dBm
+        )
+    );
+
+    setText(
+        "txBias",
+        fmt(
+            metrics.tx_bias_mA
+        )
+    );
+
+    setText(
+        "voltage",
+        fmt(
+            metrics.module_voltage
+        )
+    );
+
+    setText(
+        "opticTemp",
+        fmt(
+            metrics.optic_tempC,
+            1
+        )
+    );
+
+    setText(
+        "cpu1Temp",
+        fmt(
+            metrics.cpu1_tempC,
+            1
+        )
+    );
+
+    setText(
+        "cpu2Temp",
+        fmt(
+            metrics.cpu2_tempC,
+            1
+        )
+    );
+
+
+    const [
+        rxText,
+        rxLevel
+    ] =
+        rxStatus(
+            metrics.rx_power_dBm
+        );
+
+    setHealthBadge(
+        "rxHealth",
+        rxText,
+        rxLevel
+    );
+
+
+    const [
+        txText,
+        txLevel
+    ] =
+        txStatus(
+            metrics.tx_power_dBm
+        );
+
+    setHealthBadge(
+        "txHealth",
+        txText,
+        txLevel
+    );
+
+
+    const ploam =
+        Number(
+            metrics.ploam_state
+        );
+
+    if (
+        ploam === 51
+    ) {
+        setHealthBadge(
+            "summaryPon",
+            "O5.1 ASSOCIATED",
+            "good"
+        );
+    } else {
+        setHealthBadge(
+            "summaryPon",
+            data.ploam_label ||
+            `STATE ${ploam}`,
+            "bad"
+        );
+    }
+
+
+    updateOverallHealth();
+}
+
+
+function updateAdvancedDisplay(
+    data
+) {
+    latestAdvanced =
+        data;
+
+    if (
+        !data ||
+        !data.enabled
+    ) {
+        const status =
+            byId(
+                "advancedStatus"
+            );
+
+        status.textContent =
+            "Advanced telemetry disabled";
+
+        status.className =
+            "advanced-status";
+
+        clearAdvancedDisplay();
+
+        updateOverallHealth();
+
+        return;
+    }
+
+
+    const status =
+        byId(
+            "advancedStatus"
+        );
+
+
+    if (
+        !data.online
+    ) {
+        status.textContent =
+            "Advanced telemetry unavailable";
+
+        status.className =
+            "advanced-status bad";
+
+        clearAdvancedDisplay();
+
+        updateOverallHealth();
+
+        return;
+    }
+
+
+    status.textContent =
+        `SSH telemetry online · ${data.poll_seconds}s poll`;
+
+    status.className =
+        "advanced-status good";
+
+
+    const m =
+        data.metrics ||
+        {};
+
+
+    setText(
+        "downloadRate",
+        fmtRate(
+            m.download_bps
+        )
+    );
+
+    setText(
+        "uploadRate",
+        fmtRate(
+            m.upload_bps
+        )
+    );
+
+    setText(
+        "downloadTotal",
+        fmtBytes(
+            m.ds_bytes
+        )
+    );
+
+    setText(
+        "uploadTotal",
+        fmtBytes(
+            m.us_bytes
+        )
+    );
+
+
+    setText(
+        "ontUptime",
+        formatDuration(
+            m.ont_uptime_seconds
+        )
+    );
+
+
+    const totalMemory =
+        Number(
+            m.memory_total_kb
+        );
+
+    const usedMemory =
+        Number(
+            m.memory_used_kb
+        );
+
+    if (
+        Number.isFinite(
+            totalMemory
+        ) &&
+        Number.isFinite(
+            usedMemory
+        ) &&
+        totalMemory > 0
+    ) {
+        const percent =
+            (
+                usedMemory /
+                totalMemory
+            ) *
+            100;
+
+        setText(
+            "memoryUsage",
+            `${percent.toFixed(1)}% used`
+        );
+
+        setText(
+            "memoryDetail",
+            `${fmtBytes(
+                usedMemory * 1024
+            )} / ${fmtBytes(
+                totalMemory * 1024
+            )}`
+        );
+    } else {
+        setText(
+            "memoryUsage",
+            "-"
+        );
+
+        setText(
+            "memoryDetail",
+            "-"
+        );
+    }
+
+
+    setText(
+        "loadAverage",
+        [
+            fmt(
+                m.load_1m,
+                2
+            ),
+            fmt(
+                m.load_5m,
+                2
+            ),
+            fmt(
+                m.load_15m,
+                2
+            )
+        ].join(" / ")
+    );
+
+
+    setText(
+        "fecUpstream",
+        m.fec_upstream ||
+        "-"
+    );
+
+    setText(
+        "fecDownstream",
+        m.fec_downstream ||
+        "-"
+    );
+
+
+    setText(
+        "technicalGem",
+        m.gem_id ??
+        "-"
+    );
+
+    setText(
+        "technicalAlloc",
+        m.alloc_id ??
+        "-"
+    );
+
+
+    const info =
+        data.module_info ||
+        {};
+
+
+    setText(
+        "infoPart",
+        info.part_number ||
+        "-"
+    );
+
+    setText(
+        "infoRevision",
+        info.revision ||
+        "-"
+    );
+
+    setText(
+        "infoWavelength",
+        info.wavelength ||
+        "-"
+    );
+
+    setText(
+        "infoVendor",
+        info.vendor_name ||
+        "-"
+    );
+
+    setText(
+        "infoDmi",
+        info.dmi ||
+        "-"
+    );
+
+    setText(
+        "infoCalibration",
+        info.calibration ||
+        "-"
+    );
+
+    setText(
+        "infoRxType",
+        info.rx_measurement_type ||
+        "-"
+    );
+
+    setText(
+        "infoCompliance",
+        info.compliance ||
+        "-"
+    );
+
+    setText(
+        "infoModes",
+        cleanPipeList(
+            info.basic_modes
+        )
+    );
+
+    setText(
+        "infoOmci",
+        info.omci_support ||
+        "-"
+    );
+
+    setText(
+        "infoGemPorts",
+        info.gem_ports ??
+        "-"
+    );
+
+    setText(
+        "infoAllocations",
+        info.allocations ??
+        "-"
+    );
+
+
+    updateHealthCounters();
+
+    updateOverallHealth();
+}
+
+
+function clearAdvancedDisplay() {
+    const ids = [
+        "downloadRate",
+        "uploadRate",
+        "downloadTotal",
+        "uploadTotal",
+        "ontUptime",
+        "memoryUsage",
+        "memoryDetail",
+        "loadAverage",
+        "fecUpstream",
+        "fecDownstream",
+        "bipErrors",
+        "correctedFec",
+        "uncorrectedFec",
+        "hecErrors",
+        "micErrors",
+        "activeAlarms",
+        "keyErrors",
+        "technicalGem",
+        "technicalAlloc",
+        "infoPart",
+        "infoRevision",
+        "infoWavelength",
+        "infoVendor",
+        "infoDmi",
+        "infoCalibration",
+        "infoRxType",
+        "infoCompliance",
+        "infoModes",
+        "infoOmci",
+        "infoGemPorts",
+        "infoAllocations"
+    ];
+
+    for (
+        const id
+        of ids
+    ) {
+        setText(
+            id,
+            "-"
+        );
+    }
+}
+
+
+function updateAdvancedStats(
+    data
+) {
+    latestAdvancedStats =
+        data;
+
+    updateHealthCounters();
+
+    updateOverallHealth();
+}
+
+
+function updateHealthCounters() {
+    if (
+        !latestAdvanced ||
+        !latestAdvanced.enabled ||
+        !latestAdvanced.online ||
+        !latestAdvanced.metrics
+    ) {
+        return;
+    }
+
+    const m =
+        latestAdvanced.metrics;
+
+    const s =
+        latestAdvancedStats ||
+        {};
+
+
+    const bipDelta =
+        Number(
+            s.bip_errors_delta ||
+            0
+        );
+
+    setText(
+        "bipErrors",
+        `${fmtInteger(
+            m.bip_errors
+        )} total · +${fmtInteger(
+            bipDelta
+        )} (${rangeLabel()})`
+    );
+
+
+    const correctedDelta =
+        Number(
+            s.corrected_fec_codewords_delta ||
+            0
+        );
+
+    setText(
+        "correctedFec",
+        `${fmtInteger(
+            m.corrected_fec_codewords
+        )} total · +${fmtInteger(
+            correctedDelta
+        )}`
+    );
+
+
+    const uncorrectedDelta =
+        Number(
+            s.uncorrected_fec_codewords_delta ||
+            0
+        );
+
+    setText(
+        "uncorrectedFec",
+        `${fmtInteger(
+            m.uncorrected_fec_codewords
+        )} total · +${fmtInteger(
+            uncorrectedDelta
+        )}`
+    );
+
+
+    const correctedHecDelta =
+        Number(
+            s.psbd_hec_corrected_delta ||
+            0
+        ) +
+        Number(
+            s.fs_hec_corrected_delta ||
+            0
+        );
+
+    const uncorrectedHecDelta =
+        Number(
+            s.psbd_hec_uncorrected_delta ||
+            0
+        ) +
+        Number(
+            s.fs_hec_uncorrected_delta ||
+            0
+        );
+
+
+    const currentCorrectedHec =
+        Number(
+            m.psbd_hec_corrected ||
+            0
+        ) +
+        Number(
+            m.fs_hec_corrected ||
+            0
+        );
+
+    const currentUncorrectedHec =
+        Number(
+            m.psbd_hec_uncorrected ||
+            0
+        ) +
+        Number(
+            m.fs_hec_uncorrected ||
+            0
+        );
+
+
+    setText(
+        "hecErrors",
+        `${fmtInteger(
+            currentUncorrectedHec
+        )} uncorrected · ${fmtInteger(
+            currentCorrectedHec
+        )} corrected · +${fmtInteger(
+            uncorrectedHecDelta +
+            correctedHecDelta
+        )}`
+    );
+
+
+    const micDelta =
+        Number(
+            s.ploam_mic_errors_delta ||
+            0
+        );
+
+    setText(
+        "micErrors",
+        `${fmtInteger(
+            m.ploam_mic_errors
+        )} total · +${fmtInteger(
+            micDelta
+        )}`
+    );
+
+
+    const alarms =
+        Number(
+            m.active_alarm_count
+        );
+
+    if (
+        Number.isFinite(
+            alarms
+        )
+    ) {
+        setText(
+            "activeAlarms",
+            alarms === 0
+                ? "None"
+                : fmtInteger(
+                    alarms
+                )
+        );
+    } else {
+        setText(
+            "activeAlarms",
+            "-"
+        );
+    }
+
+
+    const keyDelta =
+        Number(
+            s.key_errors_delta ||
+            0
+        );
+
+    setText(
+        "keyErrors",
+        `${fmtInteger(
+            m.key_errors
+        )} total · +${fmtInteger(
+            keyDelta
+        )} (${rangeLabel()})`
+    );
+}
+
+
+function overallHealthState() {
+    if (
+        !latestCore ||
+        !latestCore.online
+    ) {
+        return [
+            "UNREACHABLE",
+            "bad"
+        ];
+    }
+
+
+    const coreMetrics =
+        latestCore.metrics ||
+        {};
+
+
+    if (
+        Number(
+            coreMetrics.ploam_state
+        ) !== 51
+    ) {
+        return [
+            "NOT OPERATIONAL",
+            "bad"
+        ];
+    }
+
+
+    const [
+        rxText,
+        rxLevel
+    ] =
+        rxStatus(
+            coreMetrics.rx_power_dBm
+        );
+
+
+    const [
+        txText,
+        txLevel
+    ] =
+        txStatus(
+            coreMetrics.tx_power_dBm
+        );
+
+
+    const [
+        thermalText,
+        thermalLevel
+    ] =
+        thermalStatus(
+            coreMetrics.optic_tempC,
+            coreMetrics.cpu1_tempC,
+            coreMetrics.cpu2_tempC
+        );
+
+
+    const rxValue =
+        Number(
+            coreMetrics.rx_power_dBm
+        );
+
+    const txValue =
+        Number(
+            coreMetrics.tx_power_dBm
+        );
+
+
+    const rxOperational =
+        Number.isFinite(
+            rxValue
+        ) &&
+        rxValue >= -29 &&
+        rxValue <= -8;
+
+
+    const txOperational =
+        Number.isFinite(
+            txValue
+        ) &&
+        txValue >= 4 &&
+        txValue <= 9;
+
+
+    if (
+        !rxOperational ||
+        !txOperational ||
+        thermalLevel === "bad"
+    ) {
+        return [
+            "ATTENTION",
+            "bad"
+        ];
+    }
+
+
+    if (
+        thermalLevel === "warn"
+    ) {
+        return [
+            "ATTENTION",
+            "warn"
+        ];
+    }
+
+
+    if (
+        latestAdvanced &&
+        latestAdvanced.enabled &&
+        latestAdvanced.online &&
+        latestAdvanced.metrics
+    ) {
+        const m =
+            latestAdvanced.metrics;
+
+        const s =
+            latestAdvancedStats ||
+            {};
+
+
+        const seriousDelta =
+            Number(
+                s.uncorrected_fec_codewords_delta ||
+                0
+            ) +
+            Number(
+                s.psbd_hec_uncorrected_delta ||
+                0
+            ) +
+            Number(
+                s.fs_hec_uncorrected_delta ||
+                0
+            ) +
+            Number(
+                s.ploam_mic_errors_delta ||
+                0
+            );
+
+
+        if (
+            Number(
+                m.active_alarm_count ||
+                0
+            ) > 0 ||
+            seriousDelta > 0
+        ) {
+            return [
+                "ATTENTION",
+                "warn"
+            ];
+        }
+    }
+
+
+    return [
+        "HEALTHY",
+        "good"
+    ];
+}
+
+
+function updateOverallHealth() {
+    const [
+        text,
+        level
+    ] =
+        overallHealthState();
+
+    setHealthBadge(
+        "summaryHealth",
+        text,
+        level
+    );
+
+
+    const coreText =
+        latestCore &&
+        latestCore.online
+            ? "Core telemetry online"
+            : "Core telemetry unavailable";
+
+
+    let advancedText =
+        "Advanced telemetry disabled";
+
+
+    if (
+        latestAdvanced &&
+        latestAdvanced.enabled
+    ) {
+        advancedText =
+            latestAdvanced.online
+                ? "Advanced telemetry online"
+                : "Advanced telemetry unavailable";
+    }
+
+
+    setText(
+        "footerStatus",
+        `${coreText} · ${advancedText}`
+    );
+}
+
+
+async function loadCurrent() {
     try {
-
         const response =
             await fetch(
                 "/api/current",
                 {
                     cache:
-                    "no-store"
+                        "no-store"
                 }
             );
 
-        const data =
-            await response.json();
-
-
-        const dot =
-            document
-                .getElementById(
-                    "statusDot"
-                );
-
-
-        dot.className =
-            "status-dot " +
-            (
-                data.online
-                    ? "online"
-                    : "offline"
-            );
-
-
-        setText(
-            "statusText",
-            data.online
-                ? "ONT ONLINE"
-                : "ONT UNREACHABLE"
-        );
-
-
         if (
-            data.last_success
+            !response.ok
         ) {
-
-            setText(
-                "lastUpdate",
-                "Last sample " +
-                new Date(
-                    data.last_success
-                ).toLocaleString()
-            );
-
-        } else if (
-            data.last_error
-        ) {
-
-            setText(
-                "lastUpdate",
-                data.last_error
+            throw new Error(
+                `HTTP ${response.status}`
             );
         }
 
-
-        setText(
-            "dashboardUptime",
-            formatDuration(
-                data.dashboard_uptime_seconds
-            )
+        updateCoreDisplay(
+            await response.json()
         );
-
-
-        if (!data.metrics) {
-            return;
-        }
-
-
-        const m =
-            data.metrics;
-
-
-        setText(
-            "rxPower",
-            fmt(
-                m.rx_power_dBm
-            )
+    } catch (
+        error
+    ) {
+        setClass(
+            "statusDot",
+            "status-dot offline"
         );
-
-        setText(
-            "txPower",
-            fmt(
-                m.tx_power_dBm
-            )
-        );
-
-        setText(
-            "txBias",
-            fmt(
-                m.tx_bias_mA
-            )
-        );
-
-        setText(
-            "voltage",
-            fmt(
-                m.module_voltage
-            )
-        );
-
-        setText(
-            "opticTemp",
-            fmt(
-                m.optic_tempC
-            )
-        );
-
-        setText(
-            "cpuTemps",
-            `${fmt(m.cpu1_tempC)} / ${fmt(m.cpu2_tempC)}`
-        );
-
-        setText(
-            "ploamLabel",
-            data.ploam_label ||
-            "Unknown"
-        );
-
-        setText(
-            "ploamCode",
-            m.ploam_state ??
-            "-"
-        );
-
-
-        setBadge(
-            "ponHealth",
-            (
-                data.online &&
-                m.ploam_state === 51
-            )
-                ? "OPERATIONAL"
-                : "NOT READY",
-            (
-                data.online &&
-                m.ploam_state === 51
-            )
-                ? "good"
-                : "bad"
-        );
-
-
-        const rx =
-            rxStatus(
-                m.rx_power_dBm
-            );
-
-        setBadge(
-            "rxHealth",
-            rx[0],
-            rx[1]
-        );
-
-
-        const tx =
-            txStatus(
-                m.tx_power_dBm
-            );
-
-        setBadge(
-            "txHealth",
-            tx[0],
-            tx[1]
-        );
-
-
-        const thermals =
-            thermalStatus(
-                Number(
-                    m.optic_tempC
-                ),
-                Number(
-                    m.cpu1_tempC
-                ),
-                Number(
-                    m.cpu2_tempC
-                )
-            );
-
-        setBadge(
-            "thermalHealth",
-            thermals[0],
-            thermals[1]
-        );
-
-    } catch (error) {
 
         setText(
             "statusText",
@@ -441,80 +1403,183 @@ async function updateCurrent() {
 
         setText(
             "lastUpdate",
-            String(error)
+            error.message
         );
     }
 }
 
 
-async function updateStats() {
+async function loadAdvancedCurrent() {
+    try {
+        const response =
+            await fetch(
+                "/api/advanced/current",
+                {
+                    cache:
+                        "no-store"
+                }
+            );
 
-    const response =
-        await fetch(
-            "/api/stats?range=24h",
-            {
-                cache:
-                "no-store"
-            }
+        if (
+            !response.ok
+        ) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        updateAdvancedDisplay(
+            await response.json()
         );
+    } catch (
+        error
+    ) {
+        latestAdvanced = {
+            enabled: false,
+            online: false
+        };
 
-    const s =
-        await response.json();
+        const status =
+            byId(
+                "advancedStatus"
+            );
+
+        status.textContent =
+            "Advanced telemetry unavailable";
+
+        status.className =
+            "advanced-status bad";
+
+        clearAdvancedDisplay();
+
+        updateOverallHealth();
+    }
+}
+
+
+async function loadHistory() {
+    const coreUrl =
+        `/api/history?range=${encodeURIComponent(
+            selectedRange
+        )}`;
+
+    const advancedUrl =
+        `/api/advanced/history?range=${encodeURIComponent(
+            selectedRange
+        )}`;
+
+    try {
+        const response =
+            await fetch(
+                coreUrl,
+                {
+                    cache:
+                        "no-store"
+                }
+            );
+
+        if (
+            response.ok
+        ) {
+            coreHistory =
+                await response.json();
+        }
+    } catch (
+        error
+    ) {
+        console.error(
+            "Core history:",
+            error
+        );
+    }
+
+
+    try {
+        const response =
+            await fetch(
+                advancedUrl,
+                {
+                    cache:
+                        "no-store"
+                }
+            );
+
+        if (
+            response.ok
+        ) {
+            advancedHistory =
+                await response.json();
+        } else {
+            advancedHistory =
+                [];
+        }
+    } catch (
+        error
+    ) {
+        advancedHistory =
+            [];
+    }
 
 
     setText(
-        "rxMin",
-        `${fmt(s.rx_min)} dBm`
+        "powerSamples",
+        `${coreHistory.length.toLocaleString()} plotted samples`
     );
 
     setText(
-        "rxAvg",
-        `${fmt(s.rx_avg)} dBm`
+        "tempSamples",
+        `${coreHistory.length.toLocaleString()} plotted samples`
     );
 
     setText(
-        "rxMax",
-        `${fmt(s.rx_max)} dBm`
+        "trafficSamples",
+        `${advancedHistory.length.toLocaleString()} plotted samples`
     );
 
 
-    setText(
-        "txMin",
-        `${fmt(s.tx_min)} dBm`
-    );
-
-    setText(
-        "txAvg",
-        `${fmt(s.tx_avg)} dBm`
-    );
-
-    setText(
-        "txMax",
-        `${fmt(s.tx_max)} dBm`
-    );
+    drawAllCharts();
+}
 
 
-    setText(
-        "opticMin",
-        `${fmt(s.optic_min)} °C`
-    );
+async function loadAdvancedStats() {
+    try {
+        const response =
+            await fetch(
+                `/api/advanced/stats?range=${encodeURIComponent(
+                    selectedRange
+                )}`,
+                {
+                    cache:
+                        "no-store"
+                }
+            );
 
-    setText(
-        "opticAvg",
-        `${fmt(s.optic_avg)} °C`
-    );
+        if (
+            !response.ok
+        ) {
+            return;
+        }
 
-    setText(
-        "opticMax",
-        `${fmt(s.optic_max)} °C`
-    );
+        updateAdvancedStats(
+            await response.json()
+        );
+    } catch (
+        error
+    ) {
+        latestAdvancedStats =
+            null;
+    }
+}
 
 
-    setText(
-        "statsSamples",
-        s.samples ??
-        0
-    );
+function cssColor(
+    variable
+) {
+    return getComputedStyle(
+        document.documentElement
+    ).getPropertyValue(
+        variable
+    ).trim();
 }
 
 
@@ -522,74 +1587,81 @@ function drawChart(
     canvasId,
     rows,
     series,
-    ySuffix
+    valueFormatter,
+    options = {}
 ) {
-
     const canvas =
-        document
-            .getElementById(
-                canvasId
-            );
+        byId(
+            canvasId
+        );
+
+    if (!canvas) {
+        return;
+    }
 
 
     const rect =
-        canvas
-            .getBoundingClientRect();
-
+        canvas.getBoundingClientRect();
 
     const dpr =
         window.devicePixelRatio ||
         1;
 
 
-    canvas.width =
+    const cssWidth =
         Math.max(
-            600,
-            rect.width * dpr
+            320,
+            rect.width
+        );
+
+    const cssHeight =
+        options.height ||
+        280;
+
+
+    canvas.width =
+        Math.round(
+            cssWidth *
+            dpr
+        );
+
+    canvas.height =
+        Math.round(
+            cssHeight *
+            dpr
         );
 
 
-    canvas.height =
-        280 * dpr;
-
-
     const ctx =
-        canvas
-            .getContext(
-                "2d"
-            );
+        canvas.getContext(
+            "2d"
+        );
 
 
-    ctx.scale(
+    ctx.setTransform(
         dpr,
-        dpr
+        0,
+        0,
+        dpr,
+        0,
+        0
     );
-
-
-    const w =
-        canvas.width /
-        dpr;
-
-
-    const h =
-        canvas.height /
-        dpr;
-
-
-    const pad = {
-        l: 52,
-        r: 14,
-        t: 12,
-        b: 28
-    };
 
 
     ctx.clearRect(
         0,
         0,
-        w,
-        h
+        cssWidth,
+        cssHeight
     );
+
+
+    const padding = {
+        left: 60,
+        right: 16,
+        top: 18,
+        bottom: 34
+    };
 
 
     const values =
@@ -597,29 +1669,25 @@ function drawChart(
 
 
     for (
-        const seriesItem
-        of series
+        const row
+        of rows
     ) {
-
         for (
-            const row
-            of rows
+            const item
+            of series
         ) {
-
             const value =
                 Number(
                     row[
-                        seriesItem.key
+                        item.key
                     ]
                 );
-
 
             if (
                 Number.isFinite(
                     value
                 )
             ) {
-
                 values.push(
                     value
                 );
@@ -632,236 +1700,214 @@ function drawChart(
         !rows.length ||
         !values.length
     ) {
-
         ctx.fillStyle =
-            "#8e9aa8";
-
+            cssColor(
+                "--muted"
+            );
 
         ctx.font =
             "13px system-ui";
 
-
         ctx.fillText(
             "Waiting for history samples...",
-            pad.l,
-            45
+            padding.left,
+            44
         );
-
 
         return;
     }
 
 
-    let ymin =
+    let minimum =
         Math.min(
             ...values
         );
 
-
-    let ymax =
+    let maximum =
         Math.max(
             ...values
         );
 
 
     let spread =
-        ymax -
-        ymin;
+        maximum -
+        minimum;
 
 
     if (
-        spread <
-        1
+        spread === 0
     ) {
-        spread = 1;
+        spread =
+            Math.max(
+                Math.abs(
+                    maximum
+                ) *
+                .1,
+                1
+            );
     }
 
 
-    ymin -=
+    minimum -=
         spread *
-        0.18;
+        .15;
 
-
-    ymax +=
+    maximum +=
         spread *
-        0.18;
+        .15;
 
 
-    const x =
+    if (
+        Number.isFinite(
+            Number(
+                options.minValue
+            )
+        )
+    ) {
+        minimum =
+            Number(
+                options.minValue
+            );
+    }
+
+
+    if (
+        Number.isFinite(
+            Number(
+                options.maxValue
+            )
+        )
+    ) {
+        maximum =
+            Number(
+                options.maxValue
+            );
+    }
+
+
+    if (
+        maximum <= minimum
+    ) {
+        maximum =
+            minimum + 1;
+    }
+
+
+    const plotWidth =
+        cssWidth -
+        padding.left -
+        padding.right;
+
+    const plotHeight =
+        cssHeight -
+        padding.top -
+        padding.bottom;
+
+
+    const xFor =
         index =>
-            pad.l +
+            padding.left +
             (
                 index /
                 Math.max(
                     1,
-                    rows.length - 1
+                    rows.length -
+                    1
                 )
             ) *
-            (
-                w -
-                pad.l -
-                pad.r
-            );
+            plotWidth;
 
 
-    const y =
+    const yFor =
         value =>
-            pad.t +
+            padding.top +
             (
-                ymax -
-                value
-            ) /
-            (
-                ymax -
-                ymin
+                1 -
+                (
+                    value -
+                    minimum
+                ) /
+                (
+                    maximum -
+                    minimum
+                )
             ) *
-            (
-                h -
-                pad.t -
-                pad.b
-            );
+            plotHeight;
 
 
     ctx.strokeStyle =
-        "#29323d";
-
-
-    ctx.fillStyle =
-        "#8e9aa8";
-
-
-    ctx.font =
-        "10px system-ui";
-
+        cssColor(
+            "--line"
+        );
 
     ctx.lineWidth =
         1;
 
 
+    ctx.fillStyle =
+        cssColor(
+            "--muted"
+        );
+
+    ctx.font =
+        "10px system-ui";
+
+
+    const gridLines =
+        5;
+
+
     for (
         let i = 0;
-        i <= 4;
-        i++
+        i <= gridLines;
+        i += 1
     ) {
+        const ratio =
+            i /
+            gridLines;
 
-        const value =
-            ymax -
-            (
-                ymax -
-                ymin
-            ) *
-            (
-                i / 4
-            );
-
-
-        const yy =
-            y(value);
+        const y =
+            padding.top +
+            ratio *
+            plotHeight;
 
 
         ctx.beginPath();
 
         ctx.moveTo(
-            pad.l,
-            yy
+            padding.left,
+            y
         );
 
         ctx.lineTo(
-            w -
-            pad.r,
-            yy
+            cssWidth -
+            padding.right,
+            y
         );
 
         ctx.stroke();
+
+
+        const value =
+            maximum -
+            ratio *
+            (
+                maximum -
+                minimum
+            );
 
 
         ctx.fillText(
-            value.toFixed(1) +
-            ySuffix,
-            3,
-            yy + 3
+            valueFormatter(
+                value
+            ),
+            5,
+            y + 3
         );
     }
 
 
-    for (
-        const seriesItem
-        of series
-    ) {
-
-        ctx.strokeStyle =
-            seriesItem.color;
-
-
-        ctx.lineWidth =
-            2;
-
-
-        ctx.beginPath();
-
-
-        let started =
-            false;
-
-
-        rows.forEach(
-            (
-                row,
-                index
-            ) => {
-
-                const value =
-                    Number(
-                        row[
-                            seriesItem.key
-                        ]
-                    );
-
-
-                if (
-                    !Number.isFinite(
-                        value
-                    )
-                ) {
-                    return;
-                }
-
-
-                const xx =
-                    x(index);
-
-
-                const yy =
-                    y(value);
-
-
-                if (!started) {
-
-                    ctx.moveTo(
-                        xx,
-                        yy
-                    );
-
-                    started =
-                        true;
-
-                } else {
-
-                    ctx.lineTo(
-                        xx,
-                        yy
-                    );
-                }
-
-            }
-        );
-
-
-        ctx.stroke();
-    }
-
-
-    const labels = [
+    const timeIndexes = [
         0,
         Math.floor(
             (
@@ -875,228 +1921,354 @@ function drawChart(
     ];
 
 
-    ctx.fillStyle =
-        "#8e9aa8";
+    for (
+        const index
+        of timeIndexes
+    ) {
+        if (
+            index < 0 ||
+            !rows[index]
+        ) {
+            continue;
+        }
 
 
-    labels.forEach(
-        (
-            index,
-            position
-        ) => {
-
-            const dt =
-                new Date(
-                    rows[index].ts
-                );
+        const date =
+            new Date(
+                rows[index].ts
+            );
 
 
-            const text =
-                dt.toLocaleString(
+        const label =
+            selectedRange === "7d" ||
+            selectedRange === "30d"
+                ? date.toLocaleDateString(
                     [],
                     {
                         month:
-                        "short",
-
+                            "short",
                         day:
-                        "numeric",
-
+                            "numeric"
+                    }
+                )
+                : date.toLocaleTimeString(
+                    [],
+                    {
                         hour:
-                        "numeric",
-
+                            "2-digit",
                         minute:
-                        "2-digit"
+                            "2-digit"
                     }
                 );
 
 
-            ctx.textAlign =
-                position === 0
-                    ? "left"
-                    :
-                position === 2
-                    ? "right"
-                    :
-                "center";
-
-
-            ctx.fillText(
-                text,
-                x(index),
-                h - 7
+        const x =
+            xFor(
+                index
             );
 
+
+        ctx.fillText(
+            label,
+            Math.max(
+                padding.left,
+                Math.min(
+                    x - 22,
+                    cssWidth -
+                    padding.right -
+                    45
+                )
+            ),
+            cssHeight -
+            8
+        );
+    }
+
+
+    for (
+        const item
+        of series
+    ) {
+        ctx.strokeStyle =
+            cssColor(
+                item.color
+            );
+
+        ctx.lineWidth =
+            2;
+
+        ctx.lineJoin =
+            "round";
+
+        ctx.lineCap =
+            "round";
+
+
+        let started =
+            false;
+
+
+        ctx.beginPath();
+
+
+        for (
+            let i = 0;
+            i < rows.length;
+            i += 1
+        ) {
+            const value =
+                Number(
+                    rows[i][
+                        item.key
+                    ]
+                );
+
+
+            if (
+                !Number.isFinite(
+                    value
+                )
+            ) {
+                started =
+                    false;
+
+                continue;
+            }
+
+
+            const x =
+                xFor(i);
+
+            const y =
+                yFor(value);
+
+
+            if (
+                !started
+            ) {
+                ctx.moveTo(
+                    x,
+                    y
+                );
+
+                started =
+                    true;
+            } else {
+                ctx.lineTo(
+                    x,
+                    y
+                );
+            }
+        }
+
+
+        ctx.stroke();
+    }
+}
+
+
+function drawAllCharts() {
+    drawChart(
+        "rxPowerChart",
+        coreHistory,
+        [
+            {
+                key:
+                    "rx_power_dBm",
+                color:
+                    "--rx"
+            }
+        ],
+        value =>
+            `${value.toFixed(1)} dBm`,
+        {
+            height: 190
         }
     );
 
 
-    ctx.textAlign =
-        "left";
-}
-
-
-async function updateHistory() {
-
-    const response =
-        await fetch(
-            `/api/history?range=${encodeURIComponent(selectedRange)}`,
-            {
-                cache:
-                "no-store"
-            }
-        );
-
-
-    const rows =
-        await response.json();
-
-
-    setText(
-        "sampleCount",
-        `${rows.length} plotted samples`
-    );
-
-
     drawChart(
-        "powerChart",
-        rows,
+        "txPowerChart",
+        coreHistory,
         [
             {
                 key:
-                "rx_power_dBm",
-
+                    "tx_power_dBm",
                 color:
-                "#69a7ff"
-            },
-            {
-                key:
-                "tx_power_dBm",
-
-                color:
-                "#ad86ff"
+                    "--tx"
             }
         ],
-        ""
+        value =>
+            `${value.toFixed(1)} dBm`,
+        {
+            height: 190
+        }
+    );
+
+
+    const latestHistoryPoint =
+        coreHistory.length
+            ? coreHistory[
+                coreHistory.length - 1
+            ]
+            : null;
+
+
+    setText(
+        "rxHistoryCurrent",
+        latestHistoryPoint
+            ? `${fmt(
+                latestHistoryPoint.rx_power_dBm
+            )} dBm`
+            : "-"
+    );
+
+
+    setText(
+        "txHistoryCurrent",
+        latestHistoryPoint
+            ? `${fmt(
+                latestHistoryPoint.tx_power_dBm
+            )} dBm`
+            : "-"
     );
 
 
     drawChart(
         "tempChart",
-        rows,
+        coreHistory,
         [
             {
                 key:
-                "optic_tempC",
-
+                    "optic_tempC",
                 color:
-                "#48d597"
+                    "--optic"
             },
             {
                 key:
-                "cpu1_tempC",
-
+                    "cpu1_tempC",
                 color:
-                "#ffb65c"
+                    "--cpu1"
             },
             {
                 key:
-                "cpu2_tempC",
-
+                    "cpu2_tempC",
                 color:
-                "#ff7f87"
+                    "--cpu2"
             }
         ],
-        "°"
+        value =>
+            `${value.toFixed(0)}°`
     );
 
 
-    lastHistoryRefresh =
-        Date.now();
+    drawChart(
+        "trafficChart",
+        advancedHistory,
+        [
+            {
+                key:
+                    "download_bps",
+                color:
+                    "--download"
+            },
+            {
+                key:
+                    "upload_bps",
+                color:
+                    "--upload"
+            }
+        ],
+        value =>
+            fmtRate(
+                value
+            ),
+        {
+            minValue: 0
+        }
+    );
+}
+
+
+async function refreshCurrent() {
+    await Promise.all([
+        loadCurrent(),
+        loadAdvancedCurrent()
+    ]);
+}
+
+
+async function refreshHistory() {
+    await Promise.all([
+        loadHistory(),
+        loadAdvancedStats()
+    ]);
+}
+
+
+function setRange(
+    range
+) {
+    selectedRange =
+        range;
+
+
+    document
+        .querySelectorAll(
+            ".range-buttons button"
+        )
+        .forEach(
+            button => {
+                button.classList.toggle(
+                    "active",
+                    button.dataset.range ===
+                    selectedRange
+                );
+            }
+        );
+
+
+    refreshHistory();
 }
 
 
 document
     .querySelectorAll(
-        "[data-range]"
+        ".range-buttons button"
     )
     .forEach(
         button => {
-
-            button
-                .addEventListener(
-                    "click",
-                    () => {
-
-                        document
-                            .querySelectorAll(
-                                "[data-range]"
-                            )
-                            .forEach(
-                                item =>
-                                    item
-                                        .classList
-                                        .remove(
-                                            "active"
-                                        )
-                            );
-
-
-                        button
-                            .classList
-                            .add(
-                                "active"
-                            );
-
-
-                        selectedRange =
-                            button
-                                .dataset
-                                .range;
-
-
-                        updateHistory();
-                    }
-                );
-
+            button.addEventListener(
+                "click",
+                () => {
+                    setRange(
+                        button.dataset.range
+                    );
+                }
+            );
         }
     );
 
 
-async function tick() {
-
-    await updateCurrent();
-
-
-    if (
-        Date.now() -
-        lastHistoryRefresh >
-        30000
-    ) {
-
-        try {
-
-            await Promise.all([
-                updateHistory(),
-                updateStats()
-            ]);
-
-        } catch (_) {
-        }
-    }
-
-}
-
-
 window.addEventListener(
     "resize",
-    () =>
-        updateHistory()
+    () => {
+        drawAllCharts();
+    }
 );
 
 
-tick();
+refreshCurrent();
+refreshHistory();
+
 
 setInterval(
-    tick,
+    refreshCurrent,
     5000
+);
+
+
+setInterval(
+    refreshHistory,
+    30000
 );

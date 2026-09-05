@@ -1,538 +1,964 @@
 <!doctype html>
-
 <html lang="en">
 
 <head>
-
 <meta charset="utf-8">
-
 <meta
     name="viewport"
     content="width=device-width, initial-scale=1">
 
-<title>
-X-ONU-SFPP Dashboard
-</title>
+<title>X-ONU-SFPP Dashboard</title>
 
 <link
     rel="stylesheet"
     href="/static/style.css">
-
 </head>
 
 <body>
 
 <main class="shell">
 
-
 <header class="topbar">
 
-<div>
+    <div>
+        <p class="eyebrow">
+            XGS-PON TELEMETRY
+        </p>
 
-<p class="eyebrow">
-XGS-PON TELEMETRY
-</p>
+        <h1>
+            X-ONU-SFPP
+        </h1>
 
-<h1>
-X-ONU-SFPP
-</h1>
+        <p class="subtitle">
+            8311 Optical Module Dashboard
+        </p>
+    </div>
 
-<p class="subtitle">
-8311 Optical Module Dashboard
-</p>
+    <div class="status-wrap">
 
-</div>
+        <span
+            id="statusDot"
+            class="status-dot offline">
+        </span>
 
+        <div>
+            <div
+                id="statusText"
+                class="status-text">
+                CONNECTING...
+            </div>
 
-<div class="status-wrap">
+            <div
+                id="lastUpdate"
+                class="last-update">
+                Waiting for first sample
+            </div>
+        </div>
 
-<span
-    id="statusDot"
-    class="status-dot offline">
-</span>
-
-<div>
-
-<div
-    id="statusText"
-    class="status-text">
-Connecting...
-</div>
-
-<div
-    id="lastUpdate"
-    class="last-update">
-No samples yet
-</div>
-
-</div>
-
-</div>
+    </div>
 
 </header>
 
 
-<section class="health-bar">
+<section class="summary-bar">
 
-<div>
+    <div class="summary-item">
+        <span class="label">
+            STATUS
+        </span>
 
-<span class="label">
-PON
-</span>
+        <strong
+            id="summaryOnline"
+            class="health-badge unknown">
+            -
+        </strong>
+    </div>
 
-<strong id="ponHealth">
--
-</strong>
+    <div class="summary-item">
+        <span class="label">
+            PON
+        </span>
 
-</div>
+        <strong
+            id="summaryPon"
+            class="health-badge unknown">
+            -
+        </strong>
+    </div>
 
+    <div class="summary-item">
+        <span class="label">
+            PON HEALTH
+        </span>
 
-<div>
-
-<span class="label">
-RX Signal
-</span>
-
-<strong
-    id="rxHealth"
-    class="health-badge">
--
-</strong>
-
-</div>
-
-
-<div>
-
-<span class="label">
-TX Signal
-</span>
-
-<strong
-    id="txHealth"
-    class="health-badge">
--
-</strong>
-
-</div>
-
-
-<div>
-
-<span class="label">
-Thermals
-</span>
-
-<strong
-    id="thermalHealth"
-    class="health-badge">
--
-</strong>
-
-</div>
+        <strong
+            id="summaryHealth"
+            class="health-badge unknown">
+            -
+        </strong>
+    </div>
 
 </section>
 
 
-<section class="hero-grid">
+<section class="section-block">
+
+    <div class="section-title">
+        <p class="eyebrow">
+            OPTICAL
+        </p>
+
+        <h2>
+            Optical Signal
+        </h2>
+    </div>
+
+    <div class="optical-grid">
+
+        <article class="metric-card primary">
+
+            <span class="label">
+                RX Power
+            </span>
+
+            <span
+                id="rxPower"
+                class="value">
+                -
+            </span>
+
+            <span class="unit">
+                dBm
+            </span>
+
+            <span
+                id="rxHealth"
+                class="metric-health health-badge unknown">
+                -
+            </span>
+
+        </article>
 
 
-<article class="metric-card primary">
+        <article class="metric-card primary">
 
-<span class="label">
-RX Power
-</span>
+            <span class="label">
+                TX Power
+            </span>
 
-<span
-    id="rxPower"
-    class="value">
--
-</span>
+            <span
+                id="txPower"
+                class="value">
+                -
+            </span>
 
-<span class="unit">
-dBm
-</span>
+            <span class="unit">
+                dBm
+            </span>
 
-</article>
+            <span
+                id="txHealth"
+                class="metric-health health-badge unknown">
+                -
+            </span>
 
-
-<article class="metric-card primary">
-
-<span class="label">
-TX Power
-</span>
-
-<span
-    id="txPower"
-    class="value">
--
-</span>
-
-<span class="unit">
-dBm
-</span>
-
-</article>
+        </article>
 
 
-<article class="metric-card">
+        <article class="metric-card">
 
-<span class="label">
-TX Bias
-</span>
+            <span class="label">
+                TX Bias
+            </span>
 
-<span
-    id="txBias"
-    class="value">
--
-</span>
+            <span
+                id="txBias"
+                class="value">
+                -
+            </span>
 
-<span class="unit">
-mA
-</span>
+            <span class="unit">
+                mA
+            </span>
 
-</article>
-
-
-<article class="metric-card">
-
-<span class="label">
-Module Voltage
-</span>
-
-<span
-    id="voltage"
-    class="value">
--
-</span>
-
-<span class="unit">
-V
-</span>
-
-</article>
+        </article>
 
 
-<article class="metric-card">
+        <article class="metric-card">
 
-<span class="label">
-Optic Temperature
-</span>
+            <span class="label">
+                Module Voltage
+            </span>
 
-<span
-    id="opticTemp"
-    class="value">
--
-</span>
+            <span
+                id="voltage"
+                class="value">
+                -
+            </span>
 
-<span class="unit">
-°C
-</span>
+            <span class="unit">
+                V
+            </span>
 
-</article>
+        </article>
 
-
-<article class="metric-card">
-
-<span class="label">
-CPU Temperatures
-</span>
-
-<span
-    id="cpuTemps"
-    class="value compact">
--
-</span>
-
-<span class="unit">
-CPU1 / CPU2
-</span>
-
-</article>
+    </div>
 
 </section>
 
 
-<section class="pon-card">
+<section class="section-block">
 
-<div>
+    <div class="section-title">
+        <p class="eyebrow">
+            THERMALS & SYSTEM
+        </p>
 
-<span class="label">
-PLOAM State
-</span>
+        <h2>
+            Module Health
+        </h2>
+    </div>
 
-<div
-    id="ploamLabel"
-    class="pon-state">
--
-</div>
+    <div class="thermal-grid">
 
-</div>
+        <article class="metric-card">
 
-<div
-    id="ploamCode"
-    class="pon-code">
--
-</div>
+            <span class="label">
+                Optic Temperature
+            </span>
+
+            <span
+                id="opticTemp"
+                class="value">
+                -
+            </span>
+
+            <span class="unit">
+                °C
+            </span>
+
+        </article>
+
+
+        <article class="metric-card">
+
+            <span class="label">
+                CPU 1
+            </span>
+
+            <span
+                id="cpu1Temp"
+                class="value">
+                -
+            </span>
+
+            <span class="unit">
+                °C
+            </span>
+
+        </article>
+
+
+        <article class="metric-card">
+
+            <span class="label">
+                CPU 2
+            </span>
+
+            <span
+                id="cpu2Temp"
+                class="value">
+                -
+            </span>
+
+            <span class="unit">
+                °C
+            </span>
+
+        </article>
+
+    </div>
+
+
+    <div class="system-strip">
+
+        <div class="system-item">
+            <span class="label">
+                ONT Uptime
+            </span>
+
+            <strong id="ontUptime">
+                -
+            </strong>
+        </div>
+
+        <div class="system-item">
+            <span class="label">
+                Memory
+            </span>
+
+            <strong id="memoryUsage">
+                -
+            </strong>
+
+            <span
+                id="memoryDetail"
+                class="subvalue">
+                -
+            </span>
+        </div>
+
+        <div class="system-item">
+            <span class="label">
+                Load
+            </span>
+
+            <strong id="loadAverage">
+                -
+            </strong>
+
+            <span class="subvalue">
+                1m / 5m / 15m
+            </span>
+        </div>
+
+    </div>
 
 </section>
 
 
-<section class="stats-panel">
+<section class="section-block">
 
-<div class="section-title">
+    <div class="section-title traffic-title">
 
-<p class="eyebrow">
-24-HOUR SUMMARY
-</p>
+        <div>
+            <p class="eyebrow">
+                XGS-PON TRAFFIC
+            </p>
 
-<h2>
-Signal Statistics
-</h2>
+            <h2>
+                Live Traffic
+            </h2>
+        </div>
 
-</div>
+        <div
+            id="advancedStatus"
+            class="advanced-status">
+            Checking advanced telemetry...
+        </div>
 
-
-<div class="stats-grid">
-
-
-<div class="stat-box">
-
-<span class="label">
-RX Power
-</span>
-
-<div class="stat-row">
-<span>Min</span>
-<strong id="rxMin">-</strong>
-</div>
-
-<div class="stat-row">
-<span>Avg</span>
-<strong id="rxAvg">-</strong>
-</div>
-
-<div class="stat-row">
-<span>Max</span>
-<strong id="rxMax">-</strong>
-</div>
-
-</div>
+    </div>
 
 
-<div class="stat-box">
+    <div class="traffic-grid">
 
-<span class="label">
-TX Power
-</span>
+        <article class="traffic-card">
 
-<div class="stat-row">
-<span>Min</span>
-<strong id="txMin">-</strong>
-</div>
+            <span class="traffic-direction">
+                ↓ DOWNLOAD
+            </span>
 
-<div class="stat-row">
-<span>Avg</span>
-<strong id="txAvg">-</strong>
-</div>
+            <span
+                id="downloadRate"
+                class="traffic-value">
+                -
+            </span>
 
-<div class="stat-row">
-<span>Max</span>
-<strong id="txMax">-</strong>
-</div>
+            <span class="traffic-unit">
+                current rate
+            </span>
 
-</div>
+            <div class="traffic-detail">
+                <span>
+                    Total
+                </span>
 
+                <strong id="downloadTotal">
+                    -
+                </strong>
+            </div>
 
-<div class="stat-box">
-
-<span class="label">
-Optic Temp
-</span>
-
-<div class="stat-row">
-<span>Min</span>
-<strong id="opticMin">-</strong>
-</div>
-
-<div class="stat-row">
-<span>Avg</span>
-<strong id="opticAvg">-</strong>
-</div>
-
-<div class="stat-row">
-<span>Max</span>
-<strong id="opticMax">-</strong>
-</div>
-
-</div>
+        </article>
 
 
-<div class="stat-box">
+        <article class="traffic-card">
 
-<span class="label">
-Collection
-</span>
+            <span class="traffic-direction">
+                ↑ UPLOAD
+            </span>
 
-<div class="stat-row">
-<span>Samples</span>
-<strong id="statsSamples">-</strong>
-</div>
+            <span
+                id="uploadRate"
+                class="traffic-value">
+                -
+            </span>
 
-<div class="stat-row">
-<span>Running</span>
-<strong id="dashboardUptime">-</strong>
-</div>
+            <span class="traffic-unit">
+                current rate
+            </span>
 
-<div class="stat-row">
-<span>Interval</span>
-<strong>
-{{ poll_seconds }} sec
-</strong>
-</div>
+            <div class="traffic-detail">
+                <span>
+                    Total
+                </span>
 
-</div>
+                <strong id="uploadTotal">
+                    -
+                </strong>
+            </div>
+
+        </article>
+
+    </div>
+
+</section>
 
 
-</div>
+<section class="section-block health-panel">
+
+    <div class="section-title">
+
+        <p class="eyebrow">
+            PON HEALTH
+        </p>
+
+        <h2>
+            Error & Link Status
+        </h2>
+
+    </div>
+
+
+    <div class="health-grid">
+
+        <div class="health-row">
+            <span>
+                FEC Upstream
+            </span>
+
+            <strong id="fecUpstream">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row">
+            <span>
+                FEC Downstream
+            </span>
+
+            <strong id="fecDownstream">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row">
+            <span>
+                BIP Errors
+            </span>
+
+            <strong id="bipErrors">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row">
+            <span>
+                Corrected FEC
+            </span>
+
+            <strong id="correctedFec">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row">
+            <span>
+                Uncorrected FEC
+            </span>
+
+            <strong id="uncorrectedFec">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row">
+            <span>
+                HEC Errors
+            </span>
+
+            <strong id="hecErrors">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row">
+            <span>
+                PLOAM MIC Errors
+            </span>
+
+            <strong id="micErrors">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row">
+            <span>
+                Active Alarms
+            </span>
+
+            <strong id="activeAlarms">
+                -
+            </strong>
+        </div>
+
+
+        <div class="health-row full">
+            <span>
+                GEM Key Errors
+            </span>
+
+            <strong id="keyErrors">
+                -
+            </strong>
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="history-header">
+
+    <div>
+
+        <p class="eyebrow">
+            HISTORY
+        </p>
+
+        <h2>
+            Telemetry History
+        </h2>
+
+    </div>
+
+
+    <div class="range-buttons">
+
+        <button data-range="1h">
+            1H
+        </button>
+
+        <button data-range="6h">
+            6H
+        </button>
+
+        <button
+            data-range="24h"
+            class="active">
+            24H
+        </button>
+
+        <button data-range="7d">
+            7D
+        </button>
+
+        <button data-range="30d">
+            30D
+        </button>
+
+    </div>
 
 </section>
 
 
 <section class="chart-panel">
 
-<div class="chart-head">
+    <div class="chart-head">
 
-<div>
+        <div>
+            <p class="eyebrow">
+                OPTICAL HISTORY
+            </p>
 
-<p class="eyebrow">
-OPTICAL HISTORY
-</p>
+            <h2>
+                RX / TX Power
+            </h2>
+        </div>
 
-<h2>
-RX / TX Power
-</h2>
+        <span
+            id="powerSamples"
+            class="chart-meta">
+            -
+        </span>
 
-</div>
-
-
-<div class="range-buttons">
-
-<button data-range="1h">
-1H
-</button>
-
-<button data-range="6h">
-6H
-</button>
-
-<button
-    data-range="24h"
-    class="active">
-24H
-</button>
-
-<button data-range="7d">
-7D
-</button>
-
-<button data-range="30d">
-30D
-</button>
-
-</div>
-
-</div>
+    </div>
 
 
-<canvas
-    id="powerChart"
-    height="280">
-</canvas>
+    <div class="optical-history-grid">
+
+        <div class="mini-chart">
+
+            <div class="mini-chart-title">
+                <span>
+                    RX Power
+                </span>
+
+                <strong id="rxHistoryCurrent">
+                    -
+                </strong>
+            </div>
+
+            <canvas
+                id="rxPowerChart"
+                height="190">
+            </canvas>
+
+            <div class="legend">
+                <span>
+                    <i class="legend-line rx"></i>
+                    Receive Power
+                </span>
+            </div>
+
+        </div>
 
 
-<div class="legend">
+        <div class="mini-chart">
 
-<span>
-<i class="legend-line rx"></i>
-RX Power
-</span>
+            <div class="mini-chart-title">
+                <span>
+                    TX Power
+                </span>
 
-<span>
-<i class="legend-line tx"></i>
-TX Power
-</span>
+                <strong id="txHistoryCurrent">
+                    -
+                </strong>
+            </div>
 
-</div>
+            <canvas
+                id="txPowerChart"
+                height="190">
+            </canvas>
+
+            <div class="legend">
+                <span>
+                    <i class="legend-line tx"></i>
+                    Transmit Power
+                </span>
+            </div>
+
+        </div>
+
+    </div>
 
 </section>
 
 
 <section class="chart-panel">
 
-<div class="chart-head">
+    <div class="chart-head">
 
-<div>
+        <div>
+            <p class="eyebrow">
+                THERMAL HISTORY
+            </p>
 
-<p class="eyebrow">
-THERMAL HISTORY
-</p>
+            <h2>
+                Temperatures
+            </h2>
+        </div>
 
-<h2>
-Temperatures
-</h2>
+        <span
+            id="tempSamples"
+            class="chart-meta">
+            -
+        </span>
 
-</div>
-
-</div>
-
-
-<canvas
-    id="tempChart"
-    height="280">
-</canvas>
+    </div>
 
 
-<div class="legend">
+    <canvas
+        id="tempChart"
+        height="280">
+    </canvas>
 
-<span>
-<i class="legend-line optic"></i>
-Optic
-</span>
 
-<span>
-<i class="legend-line cpu1"></i>
-CPU1
-</span>
+    <div class="legend">
 
-<span>
-<i class="legend-line cpu2"></i>
-CPU2
-</span>
+        <span>
+            <i class="legend-line optic"></i>
+            Optic
+        </span>
 
-</div>
+        <span>
+            <i class="legend-line cpu1"></i>
+            CPU1
+        </span>
+
+        <span>
+            <i class="legend-line cpu2"></i>
+            CPU2
+        </span>
+
+    </div>
+
+</section>
+
+
+<section class="chart-panel">
+
+    <div class="chart-head">
+
+        <div>
+            <p class="eyebrow">
+                TRAFFIC HISTORY
+            </p>
+
+            <h2>
+                Download / Upload
+            </h2>
+        </div>
+
+        <span
+            id="trafficSamples"
+            class="chart-meta">
+            -
+        </span>
+
+    </div>
+
+
+    <canvas
+        id="trafficChart"
+        height="280">
+    </canvas>
+
+
+    <div class="legend">
+
+        <span>
+            <i class="legend-line download"></i>
+            Download
+        </span>
+
+        <span>
+            <i class="legend-line upload"></i>
+            Upload
+        </span>
+
+    </div>
+
+</section>
+
+
+<section class="section-block info-panel">
+
+    <div class="section-title">
+
+        <p class="eyebrow">
+            ONT INFORMATION
+        </p>
+
+        <h2>
+            Module Information
+        </h2>
+
+    </div>
+
+
+    <div class="info-grid">
+
+        <div class="info-row">
+            <span>
+                Part Number
+            </span>
+
+            <strong id="infoPart">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                Revision
+            </span>
+
+            <strong id="infoRevision">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                Wavelength
+            </span>
+
+            <strong id="infoWavelength">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                Vendor
+            </span>
+
+            <strong id="infoVendor">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                DMI
+            </span>
+
+            <strong id="infoDmi">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                Calibration
+            </span>
+
+            <strong id="infoCalibration">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                RX Measurement
+            </span>
+
+            <strong id="infoRxType">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                Compliance
+            </span>
+
+            <strong id="infoCompliance">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                Basic Modes
+            </span>
+
+            <strong id="infoModes">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                OMCI
+            </span>
+
+            <strong id="infoOmci">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                GEM Ports
+            </span>
+
+            <strong id="infoGemPorts">
+                -
+            </strong>
+        </div>
+
+
+        <div class="info-row">
+            <span>
+                Allocations
+            </span>
+
+            <strong id="infoAllocations">
+                -
+            </strong>
+        </div>
+
+    </div>
+
+
+    <div class="technical-strip">
+
+        <span>
+            Ethernet GEM
+            <strong id="technicalGem">
+                -
+            </strong>
+        </span>
+
+        <span>
+            Allocation
+            <strong id="technicalAlloc">
+                -
+            </strong>
+        </span>
+
+        <span>
+            Dashboard Uptime
+            <strong id="dashboardUptime">
+                -
+            </strong>
+        </span>
+
+        <span>
+            Core Poll
+            <strong>
+                {{ poll_seconds }} sec
+            </strong>
+        </span>
+
+    </div>
 
 </section>
 
 
 <footer>
 
-<span>
-X-ONU-SFPP Dashboard
-</span>
+    <span>
+        X-ONU-SFPP Dashboard
+    </span>
 
-<span id="sampleCount">
-0 plotted samples
-</span>
+    <span id="footerStatus">
+        Waiting for telemetry
+    </span>
 
 </footer>
 
-
 </main>
-
 
 <script src="/static/dashboard.js"></script>
 
 </body>
-
 </html>

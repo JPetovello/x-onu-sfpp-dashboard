@@ -11,6 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
+COPY advanced.py .
 COPY web_templates ./web_templates
 COPY static ./static
 
