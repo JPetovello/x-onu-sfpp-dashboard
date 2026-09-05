@@ -324,6 +324,10 @@ Issues and bug reports:
 
     https://github.com/JPetovello/x-onu-sfpp-dashboard/issues
 
+## Development Note
+
+This project was developed with substantial assistance from AI-based coding tools. Project direction, design decisions, hardware testing, validation, deployment, and ongoing maintenance are performed by the project maintainer.
+
 ## License
 
 X-ONU Dashboard is licensed under the GNU Affero General Public License version 3 or later (AGPL-3.0-or-later).
