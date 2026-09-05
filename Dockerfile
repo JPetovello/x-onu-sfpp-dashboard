@@ -3,20 +3,25 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DATA_DIR=/data
+ENV HOME=/tmp
 
 WORKDIR /app
 
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt \
-    && python -m pip uninstall -y pip
+    && python -m pip uninstall -y pip \
+    && mkdir -p /data /tmp/.gunicorn \
+    && chown -R 99:100 /app /data /tmp/.gunicorn
 
 COPY app.py .
 COPY advanced.py .
 COPY web_templates ./web_templates
 COPY static ./static
 
-RUN mkdir -p /data
+RUN chown -R 99:100 /app
+
+USER 99:100
 
 EXPOSE 8080
 

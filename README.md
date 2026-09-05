@@ -243,6 +243,18 @@ V2 uses the existing core `samples` table and adds an `advanced_samples` table f
 
 Existing V1 history is preserved during upgrade.
 
+## Upgrading to the Non-Root Runtime
+
+The container now runs as the unprivileged Unraid user `nobody:users` (UID 99 / GID 100) instead of root.
+
+Fresh Unraid installations require no additional permission changes.
+
+Existing installations created by earlier versions may have `/data/metrics.db` owned by `root:root`. Before starting the updated container, run this one-time command on the Unraid host if using the default appdata path:
+
+    chown -R 99:100 /mnt/user/appdata/x-onu-dashboard
+
+This preserves the existing SQLite database and historical data while allowing the non-root container to continue writing new samples.
+
 ## Dashboard
 
 The dashboard displays:
