@@ -1,0 +1,538 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1">
+
+<title>
+X-ONU-SFPP Dashboard
+</title>
+
+<link
+    rel="stylesheet"
+    href="/static/style.css">
+
+</head>
+
+<body>
+
+<main class="shell">
+
+
+<header class="topbar">
+
+<div>
+
+<p class="eyebrow">
+XGS-PON TELEMETRY
+</p>
+
+<h1>
+X-ONU-SFPP
+</h1>
+
+<p class="subtitle">
+8311 Optical Module Dashboard
+</p>
+
+</div>
+
+
+<div class="status-wrap">
+
+<span
+    id="statusDot"
+    class="status-dot offline">
+</span>
+
+<div>
+
+<div
+    id="statusText"
+    class="status-text">
+Connecting...
+</div>
+
+<div
+    id="lastUpdate"
+    class="last-update">
+No samples yet
+</div>
+
+</div>
+
+</div>
+
+</header>
+
+
+<section class="health-bar">
+
+<div>
+
+<span class="label">
+PON
+</span>
+
+<strong id="ponHealth">
+-
+</strong>
+
+</div>
+
+
+<div>
+
+<span class="label">
+RX Signal
+</span>
+
+<strong
+    id="rxHealth"
+    class="health-badge">
+-
+</strong>
+
+</div>
+
+
+<div>
+
+<span class="label">
+TX Signal
+</span>
+
+<strong
+    id="txHealth"
+    class="health-badge">
+-
+</strong>
+
+</div>
+
+
+<div>
+
+<span class="label">
+Thermals
+</span>
+
+<strong
+    id="thermalHealth"
+    class="health-badge">
+-
+</strong>
+
+</div>
+
+</section>
+
+
+<section class="hero-grid">
+
+
+<article class="metric-card primary">
+
+<span class="label">
+RX Power
+</span>
+
+<span
+    id="rxPower"
+    class="value">
+-
+</span>
+
+<span class="unit">
+dBm
+</span>
+
+</article>
+
+
+<article class="metric-card primary">
+
+<span class="label">
+TX Power
+</span>
+
+<span
+    id="txPower"
+    class="value">
+-
+</span>
+
+<span class="unit">
+dBm
+</span>
+
+</article>
+
+
+<article class="metric-card">
+
+<span class="label">
+TX Bias
+</span>
+
+<span
+    id="txBias"
+    class="value">
+-
+</span>
+
+<span class="unit">
+mA
+</span>
+
+</article>
+
+
+<article class="metric-card">
+
+<span class="label">
+Module Voltage
+</span>
+
+<span
+    id="voltage"
+    class="value">
+-
+</span>
+
+<span class="unit">
+V
+</span>
+
+</article>
+
+
+<article class="metric-card">
+
+<span class="label">
+Optic Temperature
+</span>
+
+<span
+    id="opticTemp"
+    class="value">
+-
+</span>
+
+<span class="unit">
+°C
+</span>
+
+</article>
+
+
+<article class="metric-card">
+
+<span class="label">
+CPU Temperatures
+</span>
+
+<span
+    id="cpuTemps"
+    class="value compact">
+-
+</span>
+
+<span class="unit">
+CPU1 / CPU2
+</span>
+
+</article>
+
+</section>
+
+
+<section class="pon-card">
+
+<div>
+
+<span class="label">
+PLOAM State
+</span>
+
+<div
+    id="ploamLabel"
+    class="pon-state">
+-
+</div>
+
+</div>
+
+<div
+    id="ploamCode"
+    class="pon-code">
+-
+</div>
+
+</section>
+
+
+<section class="stats-panel">
+
+<div class="section-title">
+
+<p class="eyebrow">
+24-HOUR SUMMARY
+</p>
+
+<h2>
+Signal Statistics
+</h2>
+
+</div>
+
+
+<div class="stats-grid">
+
+
+<div class="stat-box">
+
+<span class="label">
+RX Power
+</span>
+
+<div class="stat-row">
+<span>Min</span>
+<strong id="rxMin">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Avg</span>
+<strong id="rxAvg">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Max</span>
+<strong id="rxMax">-</strong>
+</div>
+
+</div>
+
+
+<div class="stat-box">
+
+<span class="label">
+TX Power
+</span>
+
+<div class="stat-row">
+<span>Min</span>
+<strong id="txMin">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Avg</span>
+<strong id="txAvg">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Max</span>
+<strong id="txMax">-</strong>
+</div>
+
+</div>
+
+
+<div class="stat-box">
+
+<span class="label">
+Optic Temp
+</span>
+
+<div class="stat-row">
+<span>Min</span>
+<strong id="opticMin">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Avg</span>
+<strong id="opticAvg">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Max</span>
+<strong id="opticMax">-</strong>
+</div>
+
+</div>
+
+
+<div class="stat-box">
+
+<span class="label">
+Collection
+</span>
+
+<div class="stat-row">
+<span>Samples</span>
+<strong id="statsSamples">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Running</span>
+<strong id="dashboardUptime">-</strong>
+</div>
+
+<div class="stat-row">
+<span>Interval</span>
+<strong>
+{{ poll_seconds }} sec
+</strong>
+</div>
+
+</div>
+
+
+</div>
+
+</section>
+
+
+<section class="chart-panel">
+
+<div class="chart-head">
+
+<div>
+
+<p class="eyebrow">
+OPTICAL HISTORY
+</p>
+
+<h2>
+RX / TX Power
+</h2>
+
+</div>
+
+
+<div class="range-buttons">
+
+<button data-range="1h">
+1H
+</button>
+
+<button data-range="6h">
+6H
+</button>
+
+<button
+    data-range="24h"
+    class="active">
+24H
+</button>
+
+<button data-range="7d">
+7D
+</button>
+
+<button data-range="30d">
+30D
+</button>
+
+</div>
+
+</div>
+
+
+<canvas
+    id="powerChart"
+    height="280">
+</canvas>
+
+
+<div class="legend">
+
+<span>
+<i class="legend-line rx"></i>
+RX Power
+</span>
+
+<span>
+<i class="legend-line tx"></i>
+TX Power
+</span>
+
+</div>
+
+</section>
+
+
+<section class="chart-panel">
+
+<div class="chart-head">
+
+<div>
+
+<p class="eyebrow">
+THERMAL HISTORY
+</p>
+
+<h2>
+Temperatures
+</h2>
+
+</div>
+
+</div>
+
+
+<canvas
+    id="tempChart"
+    height="280">
+</canvas>
+
+
+<div class="legend">
+
+<span>
+<i class="legend-line optic"></i>
+Optic
+</span>
+
+<span>
+<i class="legend-line cpu1"></i>
+CPU1
+</span>
+
+<span>
+<i class="legend-line cpu2"></i>
+CPU2
+</span>
+
+</div>
+
+</section>
+
+
+<footer>
+
+<span>
+X-ONU-SFPP Dashboard
+</span>
+
+<span id="sampleCount">
+0 plotted samples
+</span>
+
+</footer>
+
+
+</main>
+
+
+<script src="/static/dashboard.js"></script>
+
+</body>
+
+</html>
