@@ -8,6 +8,8 @@ from datetime import datetime, timezone, timedelta
 
 import paramiko
 
+from alerts import AlertManager
+
 
 RANGES = {
     "1h": timedelta(hours=1),
@@ -90,6 +92,10 @@ class AdvancedCollector:
         self.previous_counter_sample = None
 
         self._init_db()
+
+        self.alert_manager = AlertManager(
+            self.db_path
+        )
 
 
     def _connect_db(self):
@@ -1261,6 +1267,19 @@ pontop -b -g 'Optical Interface Info'
                     self.state[
                         "module_info"
                     ] = module_info
+
+            try:
+                self.alert_manager.process_sample(
+                    ts,
+                    metrics,
+                )
+
+            except Exception as alert_exc:
+                print(
+                    "Advanced alert processing failed: "
+                    f"{type(alert_exc).__name__}: "
+                    f"{alert_exc}"
+                )
 
         except Exception as exc:
 

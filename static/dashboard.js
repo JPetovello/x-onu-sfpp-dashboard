@@ -1219,36 +1219,9 @@ function overallHealthState() {
         );
 
 
-    const rxValue =
-        Number(
-            coreMetrics.rx_power_dBm
-        );
-
-    const txValue =
-        Number(
-            coreMetrics.tx_power_dBm
-        );
-
-
-    const rxOperational =
-        Number.isFinite(
-            rxValue
-        ) &&
-        rxValue >= -29 &&
-        rxValue <= -8;
-
-
-    const txOperational =
-        Number.isFinite(
-            txValue
-        ) &&
-        txValue >= 4 &&
-        txValue <= 9;
-
-
     if (
-        !rxOperational ||
-        !txOperational ||
+        rxLevel === "bad" ||
+        txLevel === "bad" ||
         thermalLevel === "bad"
     ) {
         return [
@@ -1259,6 +1232,8 @@ function overallHealthState() {
 
 
     if (
+        rxLevel === "warn" ||
+        txLevel === "warn" ||
         thermalLevel === "warn"
     ) {
         return [
@@ -1321,7 +1296,6 @@ function overallHealthState() {
         "good"
     ];
 }
-
 
 function updateOverallHealth() {
     const [

@@ -58,8 +58,10 @@ METRIC_COLUMNS = [
 ]
 
 
+
 def utc_now_iso():
     return datetime.now(timezone.utc).isoformat()
+
 
 
 def db_connect():
@@ -73,6 +75,7 @@ def db_connect():
     con.row_factory = sqlite3.Row
 
     return con
+
 
 
 def init_db():
@@ -98,6 +101,7 @@ def init_db():
         """)
 
 
+
 def normalize_metrics(payload):
     result = {}
 
@@ -114,6 +118,7 @@ def normalize_metrics(payload):
             result[key] = float(value)
 
     return result
+
 
 
 def save_sample(metrics, ts):
@@ -143,6 +148,7 @@ def save_sample(metrics, ts):
         )
 
 
+
 def cleanup_old_samples():
     cutoff = (
         datetime.now(timezone.utc)
@@ -154,6 +160,7 @@ def cleanup_old_samples():
             "DELETE FROM samples WHERE ts < ?",
             (cutoff.isoformat(),),
         )
+
 
 
 def fetch_metrics():
@@ -174,6 +181,7 @@ def fetch_metrics():
     )
 
 
+
 def collector_loop():
     cleanup_counter = 0
 
@@ -181,12 +189,33 @@ def collector_loop():
 
         try:
             metrics = fetch_metrics()
+
+        except Exception as exc:
             ts = utc_now_iso()
 
-            save_sample(
-                metrics,
-                ts,
+            error = (
+                f"{type(exc).__name__}: {exc}"
             )
+
+            with state_lock:
+                state["online"] = False
+                state["last_error"] = error
+
+            try:
+                advanced_collector.alert_manager.process_core_unreachable(
+                    ts,
+                    error,
+                )
+
+            except Exception as alert_exc:
+                print(
+                    "Core unreachable alert processing failed: "
+                    f"{type(alert_exc).__name__}: "
+                    f"{alert_exc}"
+                )
+
+        else:
+            ts = utc_now_iso()
 
             with state_lock:
                 state["online"] = True
@@ -194,11 +223,20 @@ def collector_loop():
                 state["last_error"] = None
                 state["metrics"] = metrics
 
-        except Exception as exc:
+            try:
+                save_sample(
+                    metrics,
+                    ts,
+                )
 
-            with state_lock:
-                state["online"] = False
-                state["last_error"] = (
+                advanced_collector.alert_manager.process_core_sample(
+                    ts,
+                    metrics,
+                )
+
+            except Exception as exc:
+                print(
+                    "Core sample processing failed: "
                     f"{type(exc).__name__}: {exc}"
                 )
 
@@ -218,6 +256,7 @@ def collector_loop():
         time.sleep(POLL_SECONDS)
 
 
+
 def start_collector():
 
     thread = threading.Thread(
@@ -229,12 +268,14 @@ def start_collector():
     thread.start()
 
 
+
 @app.route("/")
 def index():
     return render_template(
         "index.html",
         poll_seconds=POLL_SECONDS,
     )
+
 
 
 @app.route("/api/current")
@@ -274,6 +315,7 @@ def api_current():
     return jsonify(snapshot)
 
 
+
 RANGES = {
     "1h": timedelta(hours=1),
     "6h": timedelta(hours=6),
@@ -281,6 +323,7 @@ RANGES = {
     "7d": timedelta(days=7),
     "30d": timedelta(days=30),
 }
+
 
 
 @app.route("/api/history")
@@ -332,6 +375,7 @@ def api_history():
             for r in rows[::step]
         ]
     )
+
 
 
 @app.route("/api/stats")
@@ -399,6 +443,7 @@ def api_stats():
     )
 
 
+
 @app.route("/api/info")
 def api_info():
 
@@ -421,12 +466,14 @@ def api_info():
     })
 
 
+
 @app.route("/api/advanced/current")
 def api_advanced_current():
 
     return jsonify(
         advanced_collector.snapshot()
     )
+
 
 
 @app.route("/api/advanced/history")
@@ -444,6 +491,7 @@ def api_advanced_history():
     )
 
 
+
 @app.route("/api/advanced/stats")
 def api_advanced_stats():
 
@@ -457,6 +505,119 @@ def api_advanced_stats():
             range_name
         )
     )
+
+
+
+@app.route("/api/alerts")
+def api_alerts():
+
+    limit = request.args.get(
+        "limit",
+        default=100,
+        type=int,
+    )
+
+    return jsonify(
+        advanced_collector.alert_manager.recent_events(
+            limit
+        )
+    )
+
+
+
+@app.route(
+    "/api/alert-config",
+    methods=["GET", "PUT"],
+)
+def api_alert_config():
+
+    manager = (
+        advanced_collector.alert_manager
+    )
+
+    if request.method == "GET":
+        return jsonify(
+            manager.get_config()
+        )
+
+    config = request.get_json(
+        silent=True
+    )
+
+    if config is None:
+        return jsonify(
+            {
+                "error": (
+                    "Request body must contain "
+                    "a JSON object"
+                )
+            }
+        ), 400
+
+    try:
+        saved_config = manager.save_config(
+            config
+        )
+
+    except ValueError as exc:
+        return jsonify(
+            {
+                "error": str(exc)
+            }
+        ), 400
+
+    return jsonify(
+        saved_config
+    )
+
+
+@app.route(
+    "/api/notification-config",
+    methods=["GET", "PUT"],
+)
+def api_notification_config():
+
+    manager = (
+        advanced_collector
+        .alert_manager
+        .notification_manager
+    )
+
+    if request.method == "GET":
+        return jsonify(
+            manager.get_config()
+        )
+
+    config = request.get_json(
+        silent=True
+    )
+
+    if config is None:
+        return jsonify(
+            {
+                "error": (
+                    "Request body must contain "
+                    "a JSON object"
+                )
+            }
+        ), 400
+
+    try:
+        saved_config = manager.save_config(
+            config
+        )
+
+    except ValueError as exc:
+        return jsonify(
+            {
+                "error": str(exc)
+            }
+        ), 400
+
+    return jsonify(
+        saved_config
+    )
+
 
 
 init_db()
