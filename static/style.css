@@ -1248,6 +1248,12 @@ footer {
     display: grid;
 
     gap: 8px;
+
+    max-height: 352px;
+
+    overflow-y: auto;
+
+    padding-right: 4px;
 }
 
 
@@ -1668,7 +1674,7 @@ footer {
 .alert-state-settings {
     display: grid;
     grid-template-columns:
-        minmax(260px, 320px);
+        repeat(4, minmax(0, 1fr));
     gap: 14px;
     margin-top: 16px;
     margin-bottom: 4px;
@@ -1676,6 +1682,19 @@ footer {
 
 .alert-state-settings .alert-setting-card {
     min-height: 0;
+}
+
+@media (max-width: 1000px) {
+    .alert-state-settings {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .alert-state-settings {
+        grid-template-columns: 1fr;
+    }
 }
 
 
