@@ -1,4 +1,11 @@
-let selectedRange = "24h";
+const HISTORY_RANGE_STORAGE_KEY = "x-onu-dashboard-history-range";
+const VALID_HISTORY_RANGES = new Set(["1h", "6h", "24h", "7d", "30d"]);
+
+let selectedRange = localStorage.getItem(HISTORY_RANGE_STORAGE_KEY) || "24h";
+
+if (!VALID_HISTORY_RANGES.has(selectedRange)) {
+    selectedRange = "24h";
+}
 
 let latestCore = null;
 let latestAdvanced = null;
@@ -2186,6 +2193,11 @@ function setRange(
     selectedRange =
         range;
 
+    localStorage.setItem(
+        HISTORY_RANGE_STORAGE_KEY,
+        selectedRange
+    );
+
 
     document
         .querySelectorAll(
@@ -2233,7 +2245,7 @@ window.addEventListener(
 
 
 refreshCurrent();
-refreshHistory();
+setRange(selectedRange);
 
 
 setInterval(

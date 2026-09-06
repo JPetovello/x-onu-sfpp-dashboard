@@ -2,7 +2,7 @@
 
 A lightweight monitoring dashboard for the EXEN X-ONU-SFPP and compatible ONTs running 8311 community firmware.
 
-The dashboard provides live and historical XGS-PON telemetry using the 8311 JSON metrics endpoint, with optional SSH-based advanced monitoring.
+The dashboard provides live and historical XGS-PON telemetry using the 8311 JSON metrics endpoint, with optional SSH-based advanced monitoring, configurable alerting, alert history, and Discord notifications.
 
 ## Features
 
@@ -18,6 +18,7 @@ Core telemetry does not require SSH and includes:
 - ONT reachability
 - Historical optical and temperature charts
 - 1 hour, 6 hour, 24 hour, 7 day, and 30 day history
+- Persistent history-range selection
 
 Optional advanced SSH telemetry adds:
 
@@ -39,6 +40,76 @@ Optional advanced SSH telemetry adds:
 - Error-counter deltas over the selected history range
 
 Advanced telemetry is optional. If SSH is disabled or unavailable, the core dashboard continues to operate normally.
+
+## Alerts
+
+The dashboard includes server-side alert monitoring. Alerts are evaluated by the collectors even when the dashboard is not open in a browser.
+
+Alert monitoring includes:
+
+- RX optical power quality changes
+- TX optical power quality changes
+- Optical and CPU thermal conditions
+- PLOAM leaving or returning to the configured operational state
+- Core telemetry becoming unreachable or recovering
+- Active ONT alarm increases, decreases, and clearing
+- GEM key-error increases
+- BIP error increases
+- Corrected and uncorrected FEC errors
+- Corrected and uncorrected PSBd HEC errors
+- Corrected and uncorrected FS HEC errors
+- PLOAM MIC errors
+
+Alert thresholds, severities, debounce behavior, minimum counter deltas, and counter cooldowns can be configured from **Alert Settings** in the dashboard.
+
+Warning conditions can require multiple consecutive samples before an alert is generated. Critical conditions can be reported immediately.
+
+Counter alerts are based on increases rather than simply whether a lifetime counter is non-zero. This helps distinguish new errors from historical errors already recorded by the ONT.
+
+### Recent Alerts
+
+Generated alerts are stored in the dashboard SQLite database and displayed in the **Recent Alerts** section.
+
+Alert events include information such as:
+
+- Timestamp
+- Severity
+- Alert type
+- Metric
+- Previous value
+- Current value
+- Delta
+- Human-readable message
+
+Recovery events are also recorded when supported conditions return to normal.
+
+## Discord Notifications
+
+V3 supports optional Discord webhook notifications.
+
+Discord notifications are generated server-side, so the dashboard does not need to remain open in a browser.
+
+To enable Discord notifications:
+
+1. Create a webhook for the desired Discord channel.
+2. Open **Notification Settings** in the dashboard.
+3. Enter the Discord webhook URL.
+4. Enable Discord notifications.
+5. Save the settings.
+
+Alert notifications include the alert severity and message, along with the affected metric when applicable.
+
+Discord is currently the only implemented notification provider.
+
+Notification delivery is intentionally isolated from telemetry collection and alert storage. A failed Discord request does not stop telemetry collection or prevent the alert event from being stored.
+
+### Discord Webhook Security
+
+A Discord webhook URL should be treated as a secret.
+
+Anyone with the webhook URL may be able to post messages to the associated Discord channel. Do not publish webhook URLs in screenshots, logs, Git repositories, support posts, or other public locations.
+
+If a webhook URL is accidentally exposed, rotate or delete the webhook in Discord and create a new one.
 
 ## Requirements
 
@@ -113,6 +184,8 @@ A failed SSH login or unavailable SSH service does not make the ONT appear offli
 
 Docker environment variables can be inspected by users with access to Docker or the Unraid host. Masking the password field in the Unraid interface only hides it visually; it does not provide secret storage.
 
+Alert and notification configuration is stored in the dashboard's persistent SQLite database. Treat the persistent `/data` directory as sensitive if notification credentials such as a Discord webhook URL have been configured.
+
 Do not expose this dashboard or the ONT management interface directly to the public Internet.
 
 ## Configuration
@@ -141,7 +214,7 @@ Default:
 
     30
 
-Number of days of historical samples to retain.
+Number of days of historical telemetry samples to retain.
 
 #### REQUEST_TIMEOUT
 
@@ -229,23 +302,33 @@ Maximum time allowed for advanced telemetry commands.
 
 ## Persistent Data
 
-Historical samples are stored in an SQLite database at:
+Historical samples, alert configuration, notification configuration, and alert events are stored in an SQLite database at:
 
     /data/metrics.db
 
-The /data directory should be mapped to persistent storage so historical data survives container upgrades and recreation.
+The `/data` directory should be mapped to persistent storage so history and configuration survive container upgrades and recreation.
 
 For Unraid, the recommended mapping is:
 
     /mnt/user/appdata/x-onu-dashboard -> /data
 
-V2 uses the existing core `samples` table and adds an `advanced_samples` table for SSH telemetry.
+V3 continues to use the existing core `samples` and `advanced_samples` telemetry tables and automatically adds the database structures required for alert history and configuration.
 
-Existing V1 history is preserved during upgrade.
+Existing telemetry history is preserved during upgrade.
+
+## Upgrading Existing Installations
+
+Existing installations can continue using the same persistent `/data` directory.
+
+On startup, V3 creates the additional database structures required for alert events, alert configuration, and notification configuration if they do not already exist.
+
+Existing core and advanced telemetry history is preserved.
+
+After upgrading, review **Alert Settings** before enabling external notifications so the configured thresholds and severities are appropriate for your ONT and environment.
 
 ## Upgrading to the Non-Root Runtime
 
-The container now runs as the unprivileged Unraid user `nobody:users` (UID 99 / GID 100) instead of root.
+The container runs as the unprivileged Unraid user `nobody:users` (UID 99 / GID 100) instead of root.
 
 Fresh Unraid installations require no additional permission changes.
 
@@ -253,7 +336,7 @@ Existing installations created by earlier versions may have `/data/metrics.db` o
 
     chown -R 99:100 /mnt/user/appdata/x-onu-dashboard
 
-This preserves the existing SQLite database and historical data while allowing the non-root container to continue writing new samples.
+This preserves the existing SQLite database and historical data while allowing the non-root container to continue writing new samples, alerts, and configuration.
 
 ## Dashboard
 
@@ -273,18 +356,25 @@ The dashboard displays:
 - Historical temperature charts
 - Historical traffic charts
 - Optical module information
+- Recent alert history
+- Configurable alert settings
+- Discord notification settings
 
 Advanced sections automatically show a disabled or unavailable state when SSH telemetry is not active.
 
 ## PLOAM State
 
-A PLOAM state of 51 represents O5.1 Associated and indicates that the ONT has reached its normal operational state.
+A PLOAM state of 51 represents O5.1 Associated and is the default operational PLOAM state used by the alert system.
+
+The operational state can be configured from **Alert Settings**.
 
 ## Optical Health
 
 The dashboard displays optical quality classifications for RX and TX signal levels.
 
 Overall PON health is evaluated separately from the cosmetic signal-quality label so that a valid operating level does not automatically create a warning merely because it falls outside a preferred signal-quality band.
+
+Alert thresholds are configurable independently through **Alert Settings**.
 
 ## Unraid
 
@@ -298,6 +388,8 @@ Recommended configuration:
     Default Appdata Path: /mnt/user/appdata/x-onu-dashboard
 
 Advanced SSH telemetry is optional and can be enabled from the container settings.
+
+Alert configuration and Discord notification configuration are managed from within the dashboard.
 
 ## Building Locally
 

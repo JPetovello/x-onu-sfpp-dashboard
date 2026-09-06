@@ -16,6 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt \
 
 COPY app.py .
 COPY advanced.py .
+COPY alerts.py .
+COPY notifications.py .
 COPY web_templates ./web_templates
 COPY static ./static
 
