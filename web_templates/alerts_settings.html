@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1">
+
+<title>
+    Alerts & Notifications - X-ONU-SFPP Dashboard
+</title>
+
+<link
+    rel="stylesheet"
+    href="/static/style.css">
+</head>
+
+<body>
+
+<main class="shell">
+
+<header class="topbar">
+
+    <div>
+        <p class="eyebrow">
+            XGS-PON TELEMETRY
+        </p>
+
+        <h1>
+            Alerts & Notifications
+        </h1>
+
+        <p class="subtitle">
+            X-ONU-SFPP Dashboard
+        </p>
+    </div>
+
+    <div class="settings-page-nav">
+        <a
+            href="/"
+            class="settings-nav-link">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+</header>
+
+
+{% include "alerts_settings_content.html" %}
+
+
+<footer>
+
+    <span>
+        X-ONU-SFPP Dashboard
+    </span>
+
+    <span>
+        Alert & Notification Settings
+    </span>
+
+</footer>
+
+</main>
+
+<script src="/static/alerts.js"></script>
+
+</body>
+</html>

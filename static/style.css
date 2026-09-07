@@ -1802,3 +1802,40 @@ footer {
 .settings-chevron {
     opacity: 0.8;
 }
+
+
+/* Alerts & Notifications page navigation */
+
+.dashboard-settings-nav {
+    margin-top: 14px;
+}
+
+.settings-page-nav {
+    display: flex;
+    align-items: center;
+}
+
+.settings-nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    color: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+.settings-nav-link:hover {
+    opacity: 0.8;
+}
+
+.settings-nav-link:active {
+    transform: translateY(1px);
+}

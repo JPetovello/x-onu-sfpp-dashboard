@@ -3,6 +3,7 @@ import queue
 import sqlite3
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from copy import deepcopy
 
@@ -204,17 +205,84 @@ class NotificationManager:
                         "must be a string"
                     )
 
-        for provider in (
-            "gotify",
-            "pushover",
-            "ntfy",
-            "webhook",
+        webhook = config["webhook"]
+
+        if (
+            webhook["enabled"]
+            and not webhook["url"].strip()
         ):
-            if config[provider]["enabled"]:
-                raise ValueError(
-                    f"{provider} notifications "
-                    "are not implemented yet"
+            raise ValueError(
+                "webhook.url is required "
+                "when Webhook notifications are enabled"
+            )
+
+        if (
+            webhook["url"].strip()
+            and not webhook["url"].strip().startswith(
+                ("http://", "https://")
+            )
+        ):
+            raise ValueError(
+                "webhook.url must start with "
+                "http:// or https://"
+            )
+
+        pushover = config["pushover"]
+
+        if (
+            pushover["enabled"]
+            and not pushover["user_key"].strip()
+        ):
+            raise ValueError(
+                "pushover.user_key is required "
+                "when Pushover notifications are enabled"
+            )
+
+        if (
+            pushover["enabled"]
+            and not pushover["api_token"].strip()
+        ):
+            raise ValueError(
+                "pushover.api_token is required "
+                "when Pushover notifications are enabled"
+            )
+
+
+        gotify = config["gotify"]
+
+        if (
+            gotify["enabled"]
+            and not gotify["server_url"].strip()
+        ):
+            raise ValueError(
+                "gotify.server_url is required "
+                "when Gotify notifications are enabled"
+            )
+
+        if (
+            gotify["enabled"]
+            and not gotify["token"].strip()
+        ):
+            raise ValueError(
+                "gotify.token is required "
+                "when Gotify notifications are enabled"
+            )
+
+        if (
+            gotify["server_url"]
+            and not (
+                gotify["server_url"].startswith(
+                    "http://"
                 )
+                or gotify["server_url"].startswith(
+                    "https://"
+                )
+            )
+        ):
+            raise ValueError(
+                "gotify.server_url must start with "
+                "http:// or https://"
+            )
 
 
         discord = config["discord"]
@@ -237,6 +305,43 @@ class NotificationManager:
             raise ValueError(
                 "discord.webhook_url must be a "
                 "Discord webhook URL"
+            )
+
+
+        ntfy = config["ntfy"]
+
+        if (
+            ntfy["enabled"]
+            and not ntfy["server_url"].strip()
+        ):
+            raise ValueError(
+                "ntfy.server_url is required "
+                "when ntfy notifications are enabled"
+            )
+
+        if (
+            ntfy["enabled"]
+            and not ntfy["topic"].strip()
+        ):
+            raise ValueError(
+                "ntfy.topic is required "
+                "when ntfy notifications are enabled"
+            )
+
+        if (
+            ntfy["server_url"]
+            and not (
+                ntfy["server_url"].startswith(
+                    "http://"
+                )
+                or ntfy["server_url"].startswith(
+                    "https://"
+                )
+            )
+        ):
+            raise ValueError(
+                "ntfy.server_url must start with "
+                "http:// or https://"
             )
 
 
@@ -436,6 +541,387 @@ class NotificationManager:
             return
 
 
+    def _send_webhook(
+        self,
+        event,
+    ):
+        with self.lock:
+            config = deepcopy(
+                NOTIFICATION_CONFIG["webhook"]
+            )
+
+        if not config["enabled"]:
+            return
+
+        url = (
+            config["url"]
+            .strip()
+        )
+
+        if not url:
+            return
+
+        payload = json.dumps({
+            "source":
+                "X-ONU-SFPP Dashboard",
+            "event":
+                event,
+        }).encode("utf-8")
+
+        request = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "Content-Type":
+                    "application/json",
+                "User-Agent":
+                    "X-ONU-SFPP-Dashboard",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=10,
+            ) as response:
+                response.read()
+
+        except (
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            TimeoutError,
+            OSError,
+        ):
+            return
+
+
+    def _send_pushover(
+        self,
+        event,
+    ):
+        with self.lock:
+            config = deepcopy(
+                NOTIFICATION_CONFIG["pushover"]
+            )
+
+        if not config["enabled"]:
+            return
+
+        user_key = (
+            config["user_key"]
+            .strip()
+        )
+
+        api_token = (
+            config["api_token"]
+            .strip()
+        )
+
+        if (
+            not user_key
+            or not api_token
+        ):
+            return
+
+        severity = (
+            event.get("severity")
+            or "warning"
+        )
+
+        message = (
+            event.get("message")
+            or "Alert"
+        )
+
+        metric = (
+            event.get("metric")
+            or ""
+        )
+
+        content = (
+            f"[{severity.upper()}] "
+            f"{message}"
+        )
+
+        if metric:
+            content += (
+                f"\nMetric: {metric}"
+            )
+
+        priority_map = {
+            "critical": 1,
+            "warning": 0,
+            "info": -1,
+        }
+
+        priority = priority_map.get(
+            severity.lower(),
+            0,
+        )
+
+        payload = urllib.parse.urlencode({
+            "token": api_token,
+            "user": user_key,
+            "title": "X-ONU-SFPP Dashboard",
+            "message": content,
+            "priority": priority,
+        }).encode("utf-8")
+
+        request = urllib.request.Request(
+            "https://api.pushover.net/1/messages.json",
+            data=payload,
+            headers={
+                "Content-Type":
+                    "application/x-www-form-urlencoded",
+                "User-Agent":
+                    "X-ONU-SFPP-Dashboard",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=10,
+            ) as response:
+                response.read()
+
+        except (
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            TimeoutError,
+            OSError,
+        ):
+            return
+
+
+    def _send_gotify(
+        self,
+        event,
+    ):
+        with self.lock:
+            config = deepcopy(
+                NOTIFICATION_CONFIG["gotify"]
+            )
+
+        if not config["enabled"]:
+            return
+
+        server_url = (
+            config["server_url"]
+            .strip()
+            .rstrip("/")
+        )
+
+        token = (
+            config["token"]
+            .strip()
+        )
+
+        if (
+            not server_url
+            or not token
+        ):
+            return
+
+        severity = (
+            event.get("severity")
+            or "warning"
+        )
+
+        message = (
+            event.get("message")
+            or "Alert"
+        )
+
+        metric = (
+            event.get("metric")
+            or ""
+        )
+
+        content = (
+            f"[{severity.upper()}] "
+            f"{message}"
+        )
+
+        if metric:
+            content += (
+                f"\nMetric: {metric}"
+            )
+
+        priority_map = {
+            "critical": 10,
+            "warning": 5,
+            "info": 0,
+        }
+
+        priority = priority_map.get(
+            severity.lower(),
+            0,
+        )
+
+        url = (
+            f"{server_url}/message"
+            f"?token={urllib.parse.quote(token, safe='')}"
+        )
+
+        payload = json.dumps({
+            "title":
+                "X-ONU-SFPP Dashboard",
+            "message":
+                content,
+            "priority":
+                priority,
+        }).encode("utf-8")
+
+        request = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "Content-Type":
+                    "application/json",
+                "User-Agent":
+                    "X-ONU-SFPP-Dashboard",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=10,
+            ) as response:
+                response.read()
+
+        except (
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            TimeoutError,
+            OSError,
+        ):
+            return
+
+
+    def _send_ntfy(
+        self,
+        event,
+    ):
+        with self.lock:
+            config = deepcopy(
+                NOTIFICATION_CONFIG["ntfy"]
+            )
+
+        if not config["enabled"]:
+            return
+
+        server_url = (
+            config["server_url"]
+            .strip()
+            .rstrip("/")
+        )
+
+        topic = (
+            config["topic"]
+            .strip()
+            .strip("/")
+        )
+
+        token = (
+            config["token"]
+            .strip()
+        )
+
+        if (
+            not server_url
+            or not topic
+        ):
+            return
+
+        severity = (
+            event.get("severity")
+            or "warning"
+        )
+
+        message = (
+            event.get("message")
+            or "Alert"
+        )
+
+        metric = (
+            event.get("metric")
+            or ""
+        )
+
+        content = (
+            f"[{severity.upper()}] "
+            f"{message}"
+        )
+
+        if metric:
+            content += (
+                f"\nMetric: {metric}"
+            )
+
+        priority_map = {
+            "critical": "5",
+            "warning": "4",
+            "info": "3",
+        }
+
+        priority = priority_map.get(
+            severity.lower(),
+            "3",
+        )
+
+        topic_path = urllib.parse.quote(
+            topic,
+            safe="",
+        )
+
+        url = (
+            f"{server_url}/{topic_path}"
+        )
+
+        headers = {
+            "Content-Type":
+                "text/plain; charset=utf-8",
+            "User-Agent":
+                "X-ONU-SFPP-Dashboard",
+            "Title":
+                "X-ONU-SFPP Dashboard",
+            "Priority":
+                priority,
+        }
+
+        if token:
+            headers["Authorization"] = (
+                f"Bearer {token}"
+            )
+
+        request = urllib.request.Request(
+            url,
+            data=content.encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=10,
+            ) as response:
+                response.read()
+
+        except (
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            TimeoutError,
+            OSError,
+        ):
+            return
+
+
     def _notification_worker(
         self,
     ):
@@ -444,6 +930,22 @@ class NotificationManager:
 
             try:
                 self._send_discord(
+                    event
+                )
+
+                self._send_pushover(
+                    event
+                )
+
+                self._send_gotify(
+                    event
+                )
+
+                self._send_ntfy(
+                    event
+                )
+
+                self._send_webhook(
                     event
                 )
 

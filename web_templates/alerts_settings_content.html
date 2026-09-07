@@ -1,0 +1,994 @@
+<details class="section-block alerts-panel settings-collapsible">
+
+    <summary class="section-title alerts-title settings-summary">
+
+        <div>
+            <p class="eyebrow">
+                ALERTS
+            </p>
+
+            <h2>
+                Alert Settings
+            </h2>
+        </div>
+
+        <div class="settings-summary-right">
+            <span
+                id="alertConfigStatus"
+                class="advanced-status">
+                Settings not loaded
+            </span>
+
+            <span
+                class="settings-chevron"
+                aria-hidden="true">
+                ›
+            </span>
+        </div>
+
+    </summary>
+
+
+    <div class="alert-settings-grid">
+
+        <div class="alert-setting-card">
+            <label
+                for="alertWarningSamples"
+                class="alert-setting-label">
+                Warning debounce
+            </label>
+
+            <div class="alert-setting-control">
+                <input
+                    id="alertWarningSamples"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="3">
+
+                <span class="alert-setting-unit">
+                    samples
+                </span>
+            </div>
+
+            <span class="alert-setting-help">
+                Consecutive warning samples required
+                before an alert is created.
+            </span>
+        </div>
+
+
+        <div class="alert-setting-card">
+            <span class="alert-setting-label">
+                RX power thresholds
+            </span>
+
+            <div class="alert-threshold-list">
+
+                <label class="alert-threshold-row">
+                    <span>Poor low</span>
+
+                    <input
+                        id="alertRxPoorLow"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Fair low</span>
+
+                    <input
+                        id="alertRxFairLow"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Poor high</span>
+
+                    <input
+                        id="alertRxPoorHigh"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+            </div>
+
+            <span class="alert-setting-help">
+                Optical receive-power thresholds
+                in dBm.
+            </span>
+        </div>
+
+
+        <div class="alert-setting-card">
+            <span class="alert-setting-label">
+                TX power thresholds
+            </span>
+
+            <div class="alert-threshold-list">
+
+                <label class="alert-threshold-row">
+                    <span>Poor low</span>
+
+                    <input
+                        id="alertTxPoorLow"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Fair low</span>
+
+                    <input
+                        id="alertTxFairLow"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Fair high</span>
+
+                    <input
+                        id="alertTxFairHigh"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Poor high</span>
+
+                    <input
+                        id="alertTxPoorHigh"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+            </div>
+
+            <span class="alert-setting-help">
+                Optical transmit-power thresholds
+                in dBm.
+            </span>
+        </div>
+
+
+        <div class="alert-setting-card">
+            <span class="alert-setting-label">
+                Thermal thresholds
+            </span>
+
+            <div class="alert-threshold-list">
+
+                <label class="alert-threshold-row">
+                    <span>Warm</span>
+
+                    <input
+                        id="alertThermalWarm"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Hot</span>
+
+                    <input
+                        id="alertThermalHot"
+                        class="alert-setting-input"
+                        type="number"
+                        step="0.1">
+                </label>
+
+            </div>
+
+            <span class="alert-setting-help">
+                Maximum optical or CPU temperature
+                thresholds in °C.
+            </span>
+        </div>
+
+
+    </div>
+
+
+    <div class="alert-state-settings">
+
+        <div class="alert-setting-card">
+            <span class="alert-setting-label">
+                GEM key errors
+            </span>
+
+            <div class="alert-threshold-list">
+
+                <label class="alert-threshold-row">
+                    <span>Minimum delta</span>
+
+                    <input
+                        id="alertGemMinDelta"
+                        class="alert-setting-input"
+                        type="number"
+                        min="1"
+                        step="1">
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Severity</span>
+
+                    <select
+                        id="alertGemSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">
+                            Info
+                        </option>
+
+                        <option value="warning">
+                            Warning
+                        </option>
+
+                        <option value="critical">
+                            Critical
+                        </option>
+
+                    </select>
+                </label>
+
+            </div>
+
+            <span class="alert-setting-help">
+                Alert when GEM key errors increase
+                by at least this amount.
+            </span>
+        </div>
+
+        <div class="alert-setting-card">
+            <span class="alert-setting-label">
+                PLOAM state
+            </span>
+
+            <div class="alert-threshold-list">
+
+                <label class="alert-threshold-row">
+                    <span>Not operational</span>
+
+                    <select
+                        id="alertPloamNotOperationalSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">
+                            Info
+                        </option>
+
+                        <option value="warning">
+                            Warning
+                        </option>
+
+                        <option value="critical">
+                            Critical
+                        </option>
+
+                    </select>
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Recovered</span>
+
+                    <select
+                        id="alertPloamRecoveredSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">
+                            Info
+                        </option>
+
+                        <option value="warning">
+                            Warning
+                        </option>
+
+                        <option value="critical">
+                            Critical
+                        </option>
+
+                    </select>
+                </label>
+
+            </div>
+
+            <span class="alert-setting-help">
+                Alert when the ONT leaves its
+                operational PLOAM state and when
+                service recovers.
+            </span>
+        </div>
+
+
+        <div class="alert-setting-card">
+            <span class="alert-setting-label">
+                Active alarms
+            </span>
+
+            <div class="alert-threshold-list">
+
+                <label class="alert-threshold-row">
+                    <span>Increased</span>
+
+                    <select
+                        id="alertActiveAlarmIncreasedSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+
+                    </select>
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Decreased</span>
+
+                    <select
+                        id="alertActiveAlarmDecreasedSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+
+                    </select>
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Cleared</span>
+
+                    <select
+                        id="alertActiveAlarmClearedSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+
+                    </select>
+                </label>
+
+            </div>
+
+            <span class="alert-setting-help">
+                Alert when the number of active ONT
+                alarms increases, decreases, or clears.
+            </span>
+        </div>
+
+        <div class="alert-setting-card">
+            <span class="alert-setting-label">
+                ONT reachability
+            </span>
+
+            <div class="alert-threshold-list">
+
+                <label class="alert-threshold-row">
+                    <span>Unreachable</span>
+
+                    <select
+                        id="alertReachabilityUnreachableSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+
+                    </select>
+                </label>
+
+                <label class="alert-threshold-row">
+                    <span>Recovered</span>
+
+                    <select
+                        id="alertReachabilityRecoveredSeverity"
+                        class="alert-setting-input alert-setting-select">
+
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+
+                    </select>
+                </label>
+
+            </div>
+
+            <span class="alert-setting-help">
+                Alert when the dashboard loses
+                communication with the ONT and when
+                connectivity returns.
+            </span>
+        </div>
+
+    </div>
+
+
+    <div class="alert-counter-section">
+
+        <div class="alert-counter-heading">
+            <div>
+                <span class="alert-setting-label">
+                    Error Counter Alerts
+                </span>
+
+                <p class="alert-counter-description">
+                    Configure delta thresholds, cooldowns,
+                    and severity for ONT error counters.
+                </p>
+            </div>
+        </div>
+
+
+        <div class="alert-counter-table">
+
+            <div class="alert-counter-row alert-counter-header">
+                <span>Counter</span>
+                <span>Minimum delta</span>
+                <span>Cooldown</span>
+                <span>Severity</span>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    BIP errors
+                </span>
+
+                <input
+                    id="alertCounterBipMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterBipCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterBipSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    Corrected FEC codewords
+                </span>
+
+                <input
+                    id="alertCounterCorrectedFecMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterCorrectedFecCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterCorrectedFecSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    Uncorrected FEC codewords
+                </span>
+
+                <input
+                    id="alertCounterUncorrectedFecMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterUncorrectedFecCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterUncorrectedFecSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    Corrected PSBd HEC errors
+                </span>
+
+                <input
+                    id="alertCounterPsbdCorrectedMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterPsbdCorrectedCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterPsbdCorrectedSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    Uncorrected PSBd HEC errors
+                </span>
+
+                <input
+                    id="alertCounterPsbdUncorrectedMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterPsbdUncorrectedCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterPsbdUncorrectedSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    Corrected FS HEC errors
+                </span>
+
+                <input
+                    id="alertCounterFsCorrectedMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterFsCorrectedCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterFsCorrectedSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    Uncorrected FS HEC errors
+                </span>
+
+                <input
+                    id="alertCounterFsUncorrectedMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterFsUncorrectedCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterFsUncorrectedSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+
+            <div class="alert-counter-row">
+                <span class="alert-counter-name">
+                    PLOAM MIC errors
+                </span>
+
+                <input
+                    id="alertCounterPloamMicMinDelta"
+                    class="alert-setting-input"
+                    type="number"
+                    min="1"
+                    step="1">
+
+                <div class="alert-counter-number">
+                    <input
+                        id="alertCounterPloamMicCooldown"
+                        class="alert-setting-input"
+                        type="number"
+                        min="0"
+                        step="1">
+
+                    <span>sec</span>
+                </div>
+
+                <select
+                    id="alertCounterPloamMicSeverity"
+                    class="alert-setting-input alert-setting-select">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="alert-settings-actions">
+
+        <button
+            id="alertSaveSettings"
+            class="alert-settings-save"
+            type="button">
+            Save Settings
+        </button>
+
+    </div>
+
+</details>
+
+
+<details class="section-block alerts-panel settings-collapsible">
+
+    <summary class="section-title alerts-title settings-summary">
+
+        <div>
+            <p class="eyebrow">
+                NOTIFICATIONS
+            </p>
+
+            <h2>
+                Notification Settings
+            </h2>
+        </div>
+
+        <div class="settings-summary-right">
+            <span
+                id="notificationSettingsStatus"
+                class="advanced-status">
+                Settings not loaded
+            </span>
+
+            <span
+                class="settings-chevron"
+                aria-hidden="true">
+                ›
+            </span>
+        </div>
+
+    </summary>
+
+
+    <div class="notification-settings-grid">
+
+        <div class="alert-setting-card">
+
+            <div class="notification-provider-heading">
+                <span class="alert-setting-label">
+                    Discord
+                </span>
+
+                <label class="notification-enable">
+                    <input
+                        id="notificationDiscordEnabled"
+                        type="checkbox">
+
+                    <span>Enabled</span>
+                </label>
+            </div>
+
+            <label class="notification-field">
+                <span>Webhook URL</span>
+
+                <input
+                    id="notificationDiscordWebhookUrl"
+                    class="alert-setting-input"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="https://discord.com/api/webhooks/...">
+            </label>
+
+            <span class="alert-setting-help">
+                Send dashboard alerts through a
+                Discord webhook.
+            </span>
+
+        </div>
+
+
+        <div class="alert-setting-card">
+
+            <div class="notification-provider-heading">
+                <span class="alert-setting-label">
+                    Pushover
+                </span>
+
+                <label class="notification-enable">
+                    <input
+                        id="notificationPushoverEnabled"
+                        type="checkbox">
+
+                    <span>Enabled</span>
+                </label>
+            </div>
+
+            <label class="notification-field">
+                <span>User Key</span>
+
+                <input
+                    id="notificationPushoverUserKey"
+                    class="alert-setting-input"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="User key">
+            </label>
+
+            <label class="notification-field">
+                <span>Application API Token</span>
+
+                <input
+                    id="notificationPushoverApiToken"
+                    class="alert-setting-input"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="API token">
+            </label>
+
+            <span class="alert-setting-help">
+                Send dashboard alerts through
+                Pushover using your user key and
+                application API token.
+            </span>
+
+        </div>
+
+
+        <div class="alert-setting-card">
+
+            <div class="notification-provider-heading">
+                <span class="alert-setting-label">
+                    Gotify
+                </span>
+
+                <label class="notification-enable">
+                    <input
+                        id="notificationGotifyEnabled"
+                        type="checkbox">
+
+                    <span>Enabled</span>
+                </label>
+            </div>
+
+            <label class="notification-field">
+                <span>Server URL</span>
+
+                <input
+                    id="notificationGotifyServerUrl"
+                    class="alert-setting-input"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="https://gotify.example.com">
+            </label>
+
+            <label class="notification-field">
+                <span>Application Token</span>
+
+                <input
+                    id="notificationGotifyToken"
+                    class="alert-setting-input"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="Application token">
+            </label>
+
+            <span class="alert-setting-help">
+                Send dashboard alerts through a
+                Gotify server using an application token.
+            </span>
+
+        </div>
+
+
+        <div class="alert-setting-card">
+
+            <div class="notification-provider-heading">
+                <span class="alert-setting-label">
+                    ntfy
+                </span>
+
+                <label class="notification-enable">
+                    <input
+                        id="notificationNtfyEnabled"
+                        type="checkbox">
+
+                    <span>Enabled</span>
+                </label>
+            </div>
+
+            <label class="notification-field">
+                <span>Server URL</span>
+
+                <input
+                    id="notificationNtfyServerUrl"
+                    class="alert-setting-input"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="https://ntfy.sh">
+            </label>
+
+            <label class="notification-field">
+                <span>Topic</span>
+
+                <input
+                    id="notificationNtfyTopic"
+                    class="alert-setting-input"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="x-onu-alerts">
+            </label>
+
+            <label class="notification-field">
+                <span>Access Token (optional)</span>
+
+                <input
+                    id="notificationNtfyToken"
+                    class="alert-setting-input"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="tk_...">
+            </label>
+
+            <span class="alert-setting-help">
+                Send dashboard alerts through an
+                ntfy server. Access tokens are optional
+                for servers or topics that do not
+                require authentication.
+            </span>
+
+        </div>
+
+
+        <div class="alert-setting-card">
+
+            <div class="notification-provider-heading">
+                <span class="alert-setting-label">
+                    Webhook
+                </span>
+
+                <label class="notification-enable">
+                    <input
+                        id="notificationWebhookEnabled"
+                        type="checkbox">
+
+                    <span>Enabled</span>
+                </label>
+            </div>
+
+            <label class="notification-field">
+                <span>Webhook URL</span>
+
+                <input
+                    id="notificationWebhookUrl"
+                    class="alert-setting-input"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="https://example.com/webhook">
+            </label>
+
+            <span class="alert-setting-help">
+                Send the complete alert event as JSON
+                to a custom HTTP or HTTPS endpoint.
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="alert-settings-actions">
+
+        <button
+            id="notificationSaveSettings"
+            class="alert-settings-save"
+            type="button">
+            Save Notifications
+        </button>
+
+    </div>
+
+</details>

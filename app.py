@@ -278,6 +278,13 @@ def index():
 
 
 
+@app.route("/alerts-settings")
+def alerts_settings():
+    return render_template(
+        "alerts_settings.html",
+    )
+
+
 @app.route("/api/current")
 def api_current():
 

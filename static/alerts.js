@@ -847,6 +847,66 @@ function renderNotificationConfig(config) {
             "notificationDiscordWebhookUrl"
         );
 
+    const pushoverEnabled =
+        getAlertElement(
+            "notificationPushoverEnabled"
+        );
+
+    const pushoverUserKey =
+        getAlertElement(
+            "notificationPushoverUserKey"
+        );
+
+    const pushoverApiToken =
+        getAlertElement(
+            "notificationPushoverApiToken"
+        );
+
+    const gotifyEnabled =
+        getAlertElement(
+            "notificationGotifyEnabled"
+        );
+
+    const gotifyServerUrl =
+        getAlertElement(
+            "notificationGotifyServerUrl"
+        );
+
+    const gotifyToken =
+        getAlertElement(
+            "notificationGotifyToken"
+        );
+
+    const ntfyEnabled =
+        getAlertElement(
+            "notificationNtfyEnabled"
+        );
+
+    const ntfyServerUrl =
+        getAlertElement(
+            "notificationNtfyServerUrl"
+        );
+
+    const ntfyTopic =
+        getAlertElement(
+            "notificationNtfyTopic"
+        );
+
+    const ntfyToken =
+        getAlertElement(
+            "notificationNtfyToken"
+        );
+
+    const customWebhookEnabled =
+        getAlertElement(
+            "notificationWebhookEnabled"
+        );
+
+    const customWebhookUrl =
+        getAlertElement(
+            "notificationWebhookUrl"
+        );
+
     const status =
         getAlertElement(
             "notificationSettingsStatus"
@@ -855,6 +915,18 @@ function renderNotificationConfig(config) {
     if (
         !enabled
         || !webhookUrl
+        || !pushoverEnabled
+        || !pushoverUserKey
+        || !pushoverApiToken
+        || !gotifyEnabled
+        || !gotifyServerUrl
+        || !gotifyToken
+        || !ntfyEnabled
+        || !ntfyServerUrl
+        || !ntfyTopic
+        || !ntfyToken
+        || !customWebhookEnabled
+        || !customWebhookUrl
         || !status
     ) {
         return;
@@ -867,6 +939,58 @@ function renderNotificationConfig(config) {
 
     webhookUrl.value =
         config?.discord?.webhook_url
+        || "";
+
+    pushoverEnabled.checked =
+        Boolean(
+            config?.pushover?.enabled
+        );
+
+    pushoverUserKey.value =
+        config?.pushover?.user_key
+        || "";
+
+    pushoverApiToken.value =
+        config?.pushover?.api_token
+        || "";
+
+    gotifyEnabled.checked =
+        Boolean(
+            config?.gotify?.enabled
+        );
+
+    gotifyServerUrl.value =
+        config?.gotify?.server_url
+        || "";
+
+    gotifyToken.value =
+        config?.gotify?.token
+        || "";
+
+    ntfyEnabled.checked =
+        Boolean(
+            config?.ntfy?.enabled
+        );
+
+    ntfyServerUrl.value =
+        config?.ntfy?.server_url
+        || "";
+
+    ntfyTopic.value =
+        config?.ntfy?.topic
+        || "";
+
+    ntfyToken.value =
+        config?.ntfy?.token
+        || "";
+
+    customWebhookEnabled.checked =
+        Boolean(
+            config?.webhook?.enabled
+        );
+
+    customWebhookUrl.value =
+        config?.webhook?.url
         || "";
 
     status.textContent =
@@ -935,10 +1059,82 @@ async function saveNotificationConfig() {
             "notificationDiscordWebhookUrl"
         );
 
+    const pushoverEnabled =
+        getAlertElement(
+            "notificationPushoverEnabled"
+        );
+
+    const pushoverUserKey =
+        getAlertElement(
+            "notificationPushoverUserKey"
+        );
+
+    const pushoverApiToken =
+        getAlertElement(
+            "notificationPushoverApiToken"
+        );
+
+    const gotifyEnabled =
+        getAlertElement(
+            "notificationGotifyEnabled"
+        );
+
+    const gotifyServerUrl =
+        getAlertElement(
+            "notificationGotifyServerUrl"
+        );
+
+    const gotifyToken =
+        getAlertElement(
+            "notificationGotifyToken"
+        );
+
+    const ntfyEnabled =
+        getAlertElement(
+            "notificationNtfyEnabled"
+        );
+
+    const ntfyServerUrl =
+        getAlertElement(
+            "notificationNtfyServerUrl"
+        );
+
+    const ntfyTopic =
+        getAlertElement(
+            "notificationNtfyTopic"
+        );
+
+    const ntfyToken =
+        getAlertElement(
+            "notificationNtfyToken"
+        );
+
+    const customWebhookEnabled =
+        getAlertElement(
+            "notificationWebhookEnabled"
+        );
+
+    const customWebhookUrl =
+        getAlertElement(
+            "notificationWebhookUrl"
+        );
+
     if (
         !currentNotificationConfig
         || !enabled
         || !webhookUrl
+        || !pushoverEnabled
+        || !pushoverUserKey
+        || !pushoverApiToken
+        || !gotifyEnabled
+        || !gotifyServerUrl
+        || !gotifyToken
+        || !ntfyEnabled
+        || !ntfyServerUrl
+        || !ntfyTopic
+        || !ntfyToken
+        || !customWebhookEnabled
+        || !customWebhookUrl
     ) {
         if (status) {
             status.textContent =
@@ -962,6 +1158,42 @@ async function saveNotificationConfig() {
 
         config.discord.webhook_url =
             webhookUrl.value.trim();
+
+        config.pushover.enabled =
+            pushoverEnabled.checked;
+
+        config.pushover.user_key =
+            pushoverUserKey.value.trim();
+
+        config.pushover.api_token =
+            pushoverApiToken.value.trim();
+
+        config.gotify.enabled =
+            gotifyEnabled.checked;
+
+        config.gotify.server_url =
+            gotifyServerUrl.value.trim();
+
+        config.gotify.token =
+            gotifyToken.value.trim();
+
+        config.ntfy.enabled =
+            ntfyEnabled.checked;
+
+        config.ntfy.server_url =
+            ntfyServerUrl.value.trim();
+
+        config.ntfy.topic =
+            ntfyTopic.value.trim();
+
+        config.ntfy.token =
+            ntfyToken.value.trim();
+
+        config.webhook.enabled =
+            customWebhookEnabled.checked;
+
+        config.webhook.url =
+            customWebhookUrl.value.trim();
 
         if (status) {
             status.textContent =
@@ -1132,11 +1364,33 @@ document
     });
 
 
-loadAlertConfig();
-loadNotificationConfig();
-loadAlerts();
+if (
+    getAlertElement(
+        "alertSaveSettings"
+    )
+) {
+    loadAlertConfig();
+}
 
-setInterval(
-    loadAlerts,
-    30000
-);
+
+if (
+    getAlertElement(
+        "notificationSaveSettings"
+    )
+) {
+    loadNotificationConfig();
+}
+
+
+if (
+    getAlertElement(
+        "alertsList"
+    )
+) {
+    loadAlerts();
+
+    setInterval(
+        loadAlerts,
+        30000
+    );
+}

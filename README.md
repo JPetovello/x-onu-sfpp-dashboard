@@ -2,7 +2,7 @@
 
 A lightweight monitoring dashboard for the EXEN X-ONU-SFPP and compatible ONTs running 8311 community firmware.
 
-The dashboard provides live and historical XGS-PON telemetry using the 8311 JSON metrics endpoint, with optional SSH-based advanced monitoring, configurable alerting, alert history, and Discord notifications.
+The dashboard provides live and historical XGS-PON telemetry using the 8311 JSON metrics endpoint, with optional SSH-based advanced monitoring, configurable alerting, alert history, and multiple notification providers.
 
 ## Features
 
@@ -60,7 +60,7 @@ Alert monitoring includes:
 - Corrected and uncorrected FS HEC errors
 - PLOAM MIC errors
 
-Alert thresholds, severities, debounce behavior, minimum counter deltas, and counter cooldowns can be configured from **Alert Settings** in the dashboard.
+Alert thresholds, severities, debounce behavior, minimum counter deltas, and counter cooldowns can be configured from the dedicated **Alerts & Notifications** page.
 
 Warning conditions can require multiple consecutive samples before an alert is generated. Critical conditions can be reported immediately.
 
@@ -68,7 +68,7 @@ Counter alerts are based on increases rather than simply whether a lifetime coun
 
 ### Alert Settings Reference
 
-The **Alert Settings** panel controls when alert events are generated and what severity is assigned to them.
+The **Alert Settings** panel on the **Alerts & Notifications** page controls when alert events are generated and what severity is assigned to them.
 
 Changing an alert severity does not change when the condition is detected. It changes how the resulting event is classified. Available severities are **Info**, **Warning**, and **Critical**.
 
@@ -299,13 +299,23 @@ Recovery events default to **Info** where a separate recovery severity is availa
 
 Alert generation and notification delivery are separate operations.
 
+The dashboard provides a dedicated **Alerts & Notifications** page for configuring alert behavior and external notification delivery. The main dashboard continues to display **Recent Alerts** without using space for configuration controls.
+
 **Alert Settings** determine whether an event is generated and the severity assigned to it.
 
 **Notification Settings** determine whether generated events are sent to an external notification provider.
 
-This means alerts continue to be evaluated and stored in the dashboard database even when Discord notifications are disabled.
+Supported notification providers are:
 
-Enabling Discord does not change the alert thresholds. It simply allows generated alert events to be delivered to the configured Discord webhook.
+- Discord
+- ntfy
+- Gotify
+- Pushover
+- Generic Webhook
+
+This means alerts continue to be evaluated and stored in the dashboard database even when external notifications are disabled.
+
+Enabling a notification provider does not change the alert thresholds. It simply allows generated alert events to be delivered through the configured provider.
 
 ### Recent Alerts
 
@@ -324,33 +334,114 @@ Alert events include information such as:
 
 Recovery events are also recorded when supported conditions return to normal.
 
-## Discord Notifications
+## Notification Providers
 
-V3 supports optional Discord webhook notifications.
+Notification delivery is performed server-side, so the dashboard does not need to remain open in a browser for notifications to be sent.
 
-Discord notifications are generated server-side, so the dashboard does not need to remain open in a browser.
+Notification delivery is intentionally isolated from telemetry collection and alert storage. A failed notification request does not stop telemetry collection or prevent the alert event from being stored.
+
+Multiple notification providers can be configured from the **Notification Settings** panel on the **Alerts & Notifications** page.
+
+### Discord
+
+Discord notifications are delivered using a Discord webhook.
 
 To enable Discord notifications:
 
 1. Create a webhook for the desired Discord channel.
-2. Open **Notification Settings** in the dashboard.
+2. Open the **Alerts & Notifications** page.
 3. Enter the Discord webhook URL.
 4. Enable Discord notifications.
 5. Save the settings.
 
 Alert notifications include the alert severity and message, along with the affected metric when applicable.
 
-Discord is currently the only implemented notification provider.
+### ntfy
 
-Notification delivery is intentionally isolated from telemetry collection and alert storage. A failed Discord request does not stop telemetry collection or prevent the alert event from being stored.
+ntfy notifications can be delivered through the public ntfy service or a compatible self-hosted ntfy server.
 
-### Discord Webhook Security
+To enable ntfy notifications:
 
-A Discord webhook URL should be treated as a secret.
+1. Open the **Alerts & Notifications** page.
+2. Enter the ntfy server URL. The default public server is `https://ntfy.sh`.
+3. Enter the topic that should receive dashboard alerts.
+4. Enter an access token if the server or topic requires authentication. The token is optional.
+5. Enable ntfy notifications.
+6. Save the settings.
 
-Anyone with the webhook URL may be able to post messages to the associated Discord channel. Do not publish webhook URLs in screenshots, logs, Git repositories, support posts, or other public locations.
+An ntfy account is not required when using a server or topic that permits unauthenticated publishing.
 
-If a webhook URL is accidentally exposed, rotate or delete the webhook in Discord and create a new one.
+### Gotify
+
+Gotify notifications can be delivered to a Gotify server using an application token.
+
+To enable Gotify notifications:
+
+1. Create an application in Gotify and obtain its application token.
+2. Open the **Alerts & Notifications** page.
+3. Enter the Gotify server URL.
+4. Enter the application token.
+5. Enable Gotify notifications.
+6. Save the settings.
+
+The dashboard maps alert severity to Gotify message priority so more important alerts can be presented with a higher priority.
+
+### Pushover
+
+Pushover notifications are delivered through the Pushover message API.
+
+To enable Pushover notifications:
+
+1. Obtain the Pushover user key for the destination account.
+2. Create or select a Pushover application and obtain its API token.
+3. Open the **Alerts & Notifications** page.
+4. Enter the user key and API token.
+5. Enable Pushover notifications.
+6. Save the settings.
+
+Critical dashboard alerts use Pushover priority `1`. Emergency priority `2` is intentionally not used because it requires retry and expiration parameters and has different acknowledgement behavior.
+
+### Generic Webhook
+
+The Generic Webhook provider sends the complete alert event to a custom HTTP or HTTPS endpoint using an HTTP `POST` request with a JSON body.
+
+To enable Generic Webhook notifications:
+
+1. Open the **Alerts & Notifications** page.
+2. Enter the destination HTTP or HTTPS URL.
+3. Enable Webhook notifications.
+4. Save the settings.
+
+The request uses the following general structure:
+
+    {
+      "source": "X-ONU-SFPP Dashboard",
+      "event": {
+        "...": "complete alert event"
+      }
+    }
+
+The `event` object contains the alert data generated by the dashboard, which may include fields such as severity, message, metric, previous value, current value, and delta.
+
+Generic Webhook endpoints should validate incoming requests as appropriate for the receiving system.
+
+### ntfy Topic Security
+
+Topics on a public ntfy server should not be treated as private merely because the topic name is difficult to guess.
+
+Anyone who knows or discovers an unauthenticated topic name may be able to subscribe to messages published to that topic. Use a sufficiently random topic name and avoid including sensitive information in notifications sent to a public unauthenticated topic.
+
+For stronger access control, use an authenticated ntfy configuration or a self-hosted ntfy server and configure an access token when required.
+
+### Notification Credential Security
+
+Discord webhook URLs, Gotify application tokens, Pushover credentials, ntfy access tokens, and private Generic Webhook URLs should be treated as sensitive configuration.
+
+Do not publish notification credentials in screenshots, logs, Git repositories, support posts, or other public locations.
+
+Anyone with a Discord webhook URL may be able to post messages to the associated Discord channel. If a Discord webhook URL is accidentally exposed, rotate or delete the webhook and create a new one.
+
+If another notification credential or private endpoint is exposed, revoke, rotate, or replace it when supported by the notification service.
 
 ## Requirements
 
@@ -425,7 +516,7 @@ A failed SSH login or unavailable SSH service does not make the ONT appear offli
 
 Docker environment variables can be inspected by users with access to Docker or the Unraid host. Masking the password field in the Unraid interface only hides it visually; it does not provide secret storage.
 
-Alert and notification configuration is stored in the dashboard's persistent SQLite database. Treat the persistent `/data` directory as sensitive if notification credentials such as a Discord webhook URL have been configured.
+Alert and notification configuration is stored in the dashboard's persistent SQLite database. Treat the persistent `/data` directory as sensitive if notification credentials or private notification endpoint URLs have been configured.
 
 Do not expose this dashboard or the ONT management interface directly to the public Internet.
 
@@ -599,7 +690,7 @@ The dashboard displays:
 - Optical module information
 - Recent alert history
 - Configurable alert settings
-- Discord notification settings
+- Discord, ntfy, Gotify, Pushover, and Generic Webhook notification settings
 
 Advanced sections automatically show a disabled or unavailable state when SSH telemetry is not active.
 
@@ -630,7 +721,7 @@ Recommended configuration:
 
 Advanced SSH telemetry is optional and can be enabled from the container settings.
 
-Alert configuration and Discord notification configuration are managed from within the dashboard.
+Alert configuration and notification provider settings are managed from within the dashboard.
 
 ## Building Locally
 
