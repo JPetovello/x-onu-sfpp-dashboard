@@ -1706,12 +1706,32 @@ footer {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.notification-settings-grid {
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(280px, 1fr));
-    gap: 14px;
+.notification-settings-stack {
     margin-top: 14px;
+}
+
+.notification-provider-row {
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notification-provider-row:first-child {
+    padding-top: 8px;
+}
+
+.notification-provider-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 8px;
+}
+
+.notification-provider-row .notification-field {
+    max-width: 760px;
+}
+
+.notification-provider-row .alert-setting-help {
+    display: block;
+    max-width: 760px;
+    margin-top: 7px;
 }
 
 .notification-provider-heading {
@@ -1754,11 +1774,6 @@ footer {
     margin-top: 14px;
 }
 
-@media (max-width: 700px) {
-    .notification-settings-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
 
 /* V3 Collapsible Settings Panels */
