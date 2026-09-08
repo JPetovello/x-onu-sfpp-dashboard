@@ -427,13 +427,61 @@ class NotificationManager:
             )
 
 
+    def _public_config(
+        self,
+        config,
+    ):
+        public = deepcopy(
+            config
+        )
+
+        secret_fields = {
+            "discord": (
+                "webhook_url",
+            ),
+            "gotify": (
+                "token",
+            ),
+            "pushover": (
+                "user_key",
+                "api_token",
+            ),
+            "ntfy": (
+                "token",
+            ),
+            "webhook": (
+                "url",
+            ),
+        }
+
+        for provider, fields in (
+            secret_fields.items()
+        ):
+            for field in fields:
+                configured = bool(
+                    public[provider][field]
+                )
+
+                public[provider][field] = ""
+
+                public[provider][
+                    f"{field}_configured"
+                ] = configured
+
+        return public
+
+
     def get_config(
         self,
     ):
         with self.lock:
-            return deepcopy(
+            config = deepcopy(
                 NOTIFICATION_CONFIG
             )
+
+        return self._public_config(
+            config
+        )
 
 
     def save_config(
@@ -442,8 +490,83 @@ class NotificationManager:
     ):
         global NOTIFICATION_CONFIG
 
-        validated = self.validate_config(
+        if not isinstance(
+            config,
+            dict,
+        ):
+            raise ValueError(
+                "Notification configuration "
+                "must be an object"
+            )
+
+        with self.lock:
+            current = deepcopy(
+                NOTIFICATION_CONFIG
+            )
+
+        incoming = deepcopy(
             config
+        )
+
+        secret_fields = {
+            "discord": (
+                "webhook_url",
+            ),
+            "gotify": (
+                "token",
+            ),
+            "pushover": (
+                "user_key",
+                "api_token",
+            ),
+            "ntfy": (
+                "token",
+            ),
+            "webhook": (
+                "url",
+            ),
+        }
+
+        for provider, fields in (
+            secret_fields.items()
+        ):
+            settings = incoming.get(
+                provider
+            )
+
+            if not isinstance(
+                settings,
+                dict,
+            ):
+                continue
+
+            for field in fields:
+                configured_key = (
+                    f"{field}_configured"
+                )
+
+                was_configured = (
+                    settings.pop(
+                        configured_key,
+                        False,
+                    )
+                    is True
+                )
+
+                value = settings.get(
+                    field
+                )
+
+                if (
+                    was_configured
+                    and value == ""
+                ):
+                    settings[field] = (
+                        current[provider][field]
+                    )
+
+        validated = self.validate_config(
+            incoming
         )
 
         self._write_config_row(
@@ -455,9 +578,13 @@ class NotificationManager:
                 validated
             )
 
-            return deepcopy(
+            saved = deepcopy(
                 NOTIFICATION_CONFIG
             )
+
+        return self._public_config(
+            saved
+        )
 
 
     def _send_discord(

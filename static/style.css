@@ -1854,3 +1854,32 @@ footer {
 .settings-nav-link:active {
     transform: translateY(1px);
 }
+
+/* Notification secret controls */
+
+.notification-secret-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.notification-secret-clear input {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.notification-secret-clear:has(input:disabled) {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.notification-secret-clear input:disabled {
+    cursor: default;
+}

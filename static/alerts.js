@@ -907,6 +907,36 @@ function renderNotificationConfig(config) {
             "notificationWebhookUrl"
         );
 
+    const webhookUrlClear =
+        getAlertElement(
+            "notificationDiscordWebhookUrlClear"
+        );
+
+    const pushoverUserKeyClear =
+        getAlertElement(
+            "notificationPushoverUserKeyClear"
+        );
+
+    const pushoverApiTokenClear =
+        getAlertElement(
+            "notificationPushoverApiTokenClear"
+        );
+
+    const gotifyTokenClear =
+        getAlertElement(
+            "notificationGotifyTokenClear"
+        );
+
+    const ntfyTokenClear =
+        getAlertElement(
+            "notificationNtfyTokenClear"
+        );
+
+    const customWebhookUrlClear =
+        getAlertElement(
+            "notificationWebhookUrlClear"
+        );
+
     const status =
         getAlertElement(
             "notificationSettingsStatus"
@@ -927,6 +957,12 @@ function renderNotificationConfig(config) {
         || !ntfyToken
         || !customWebhookEnabled
         || !customWebhookUrl
+        || !webhookUrlClear
+        || !pushoverUserKeyClear
+        || !pushoverApiTokenClear
+        || !gotifyTokenClear
+        || !ntfyTokenClear
+        || !customWebhookUrlClear
         || !status
     ) {
         return;
@@ -937,22 +973,46 @@ function renderNotificationConfig(config) {
             config?.discord?.enabled
         );
 
-    webhookUrl.value =
-        config?.discord?.webhook_url
-        || "";
+    webhookUrl.value = "";
+
+    webhookUrl.placeholder =
+        config?.discord?.webhook_url_configured
+        ? "Configured - leave blank to keep"
+        : "Discord webhook URL";
+
+    webhookUrlClear.checked = false;
+
+    webhookUrlClear.disabled =
+        !config?.discord?.webhook_url_configured;
 
     pushoverEnabled.checked =
         Boolean(
             config?.pushover?.enabled
         );
 
-    pushoverUserKey.value =
-        config?.pushover?.user_key
-        || "";
+    pushoverUserKey.value = "";
 
-    pushoverApiToken.value =
-        config?.pushover?.api_token
-        || "";
+    pushoverUserKey.placeholder =
+        config?.pushover?.user_key_configured
+        ? "Configured - leave blank to keep"
+        : "User key";
+
+    pushoverUserKeyClear.checked = false;
+
+    pushoverUserKeyClear.disabled =
+        !config?.pushover?.user_key_configured;
+
+    pushoverApiToken.value = "";
+
+    pushoverApiToken.placeholder =
+        config?.pushover?.api_token_configured
+        ? "Configured - leave blank to keep"
+        : "API token";
+
+    pushoverApiTokenClear.checked = false;
+
+    pushoverApiTokenClear.disabled =
+        !config?.pushover?.api_token_configured;
 
     gotifyEnabled.checked =
         Boolean(
@@ -963,9 +1023,17 @@ function renderNotificationConfig(config) {
         config?.gotify?.server_url
         || "";
 
-    gotifyToken.value =
-        config?.gotify?.token
-        || "";
+    gotifyToken.value = "";
+
+    gotifyToken.placeholder =
+        config?.gotify?.token_configured
+        ? "Configured - leave blank to keep"
+        : "Application token";
+
+    gotifyTokenClear.checked = false;
+
+    gotifyTokenClear.disabled =
+        !config?.gotify?.token_configured;
 
     ntfyEnabled.checked =
         Boolean(
@@ -980,18 +1048,34 @@ function renderNotificationConfig(config) {
         config?.ntfy?.topic
         || "";
 
-    ntfyToken.value =
-        config?.ntfy?.token
-        || "";
+    ntfyToken.value = "";
+
+    ntfyToken.placeholder =
+        config?.ntfy?.token_configured
+        ? "Configured - leave blank to keep"
+        : "Access token (optional)";
+
+    ntfyTokenClear.checked = false;
+
+    ntfyTokenClear.disabled =
+        !config?.ntfy?.token_configured;
 
     customWebhookEnabled.checked =
         Boolean(
             config?.webhook?.enabled
         );
 
-    customWebhookUrl.value =
-        config?.webhook?.url
-        || "";
+    customWebhookUrl.value = "";
+
+    customWebhookUrl.placeholder =
+        config?.webhook?.url_configured
+        ? "Configured - leave blank to keep"
+        : "Webhook URL";
+
+    customWebhookUrlClear.checked = false;
+
+    customWebhookUrlClear.disabled =
+        !config?.webhook?.url_configured;
 
     status.textContent =
         "Settings loaded";
@@ -1119,6 +1203,36 @@ async function saveNotificationConfig() {
             "notificationWebhookUrl"
         );
 
+    const webhookUrlClear =
+        getAlertElement(
+            "notificationDiscordWebhookUrlClear"
+        );
+
+    const pushoverUserKeyClear =
+        getAlertElement(
+            "notificationPushoverUserKeyClear"
+        );
+
+    const pushoverApiTokenClear =
+        getAlertElement(
+            "notificationPushoverApiTokenClear"
+        );
+
+    const gotifyTokenClear =
+        getAlertElement(
+            "notificationGotifyTokenClear"
+        );
+
+    const ntfyTokenClear =
+        getAlertElement(
+            "notificationNtfyTokenClear"
+        );
+
+    const customWebhookUrlClear =
+        getAlertElement(
+            "notificationWebhookUrlClear"
+        );
+
     if (
         !currentNotificationConfig
         || !enabled
@@ -1135,6 +1249,12 @@ async function saveNotificationConfig() {
         || !ntfyToken
         || !customWebhookEnabled
         || !customWebhookUrl
+        || !webhookUrlClear
+        || !pushoverUserKeyClear
+        || !pushoverApiTokenClear
+        || !gotifyTokenClear
+        || !ntfyTokenClear
+        || !customWebhookUrlClear
     ) {
         if (status) {
             status.textContent =
@@ -1157,16 +1277,43 @@ async function saveNotificationConfig() {
             enabled.checked;
 
         config.discord.webhook_url =
-            webhookUrl.value.trim();
+            webhookUrlClear.checked
+            ? ""
+            : webhookUrl.value.trim();
+
+        config.discord.webhook_url_configured =
+            webhookUrlClear.checked
+            ? false
+            : Boolean(
+                config.discord.webhook_url_configured
+            );
 
         config.pushover.enabled =
             pushoverEnabled.checked;
 
         config.pushover.user_key =
-            pushoverUserKey.value.trim();
+            pushoverUserKeyClear.checked
+            ? ""
+            : pushoverUserKey.value.trim();
+
+        config.pushover.user_key_configured =
+            pushoverUserKeyClear.checked
+            ? false
+            : Boolean(
+                config.pushover.user_key_configured
+            );
 
         config.pushover.api_token =
-            pushoverApiToken.value.trim();
+            pushoverApiTokenClear.checked
+            ? ""
+            : pushoverApiToken.value.trim();
+
+        config.pushover.api_token_configured =
+            pushoverApiTokenClear.checked
+            ? false
+            : Boolean(
+                config.pushover.api_token_configured
+            );
 
         config.gotify.enabled =
             gotifyEnabled.checked;
@@ -1175,7 +1322,16 @@ async function saveNotificationConfig() {
             gotifyServerUrl.value.trim();
 
         config.gotify.token =
-            gotifyToken.value.trim();
+            gotifyTokenClear.checked
+            ? ""
+            : gotifyToken.value.trim();
+
+        config.gotify.token_configured =
+            gotifyTokenClear.checked
+            ? false
+            : Boolean(
+                config.gotify.token_configured
+            );
 
         config.ntfy.enabled =
             ntfyEnabled.checked;
@@ -1187,13 +1343,31 @@ async function saveNotificationConfig() {
             ntfyTopic.value.trim();
 
         config.ntfy.token =
-            ntfyToken.value.trim();
+            ntfyTokenClear.checked
+            ? ""
+            : ntfyToken.value.trim();
+
+        config.ntfy.token_configured =
+            ntfyTokenClear.checked
+            ? false
+            : Boolean(
+                config.ntfy.token_configured
+            );
 
         config.webhook.enabled =
             customWebhookEnabled.checked;
 
         config.webhook.url =
-            customWebhookUrl.value.trim();
+            customWebhookUrlClear.checked
+            ? ""
+            : customWebhookUrl.value.trim();
+
+        config.webhook.url_configured =
+            customWebhookUrlClear.checked
+            ? false
+            : Boolean(
+                config.webhook.url_configured
+            );
 
         if (status) {
             status.textContent =

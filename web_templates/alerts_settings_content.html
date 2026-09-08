@@ -778,9 +778,16 @@
                 <input
                     id="notificationDiscordWebhookUrl"
                     class="alert-setting-input"
-                    type="text"
+                    type="password"
                     autocomplete="off"
                     placeholder="https://discord.com/api/webhooks/...">
+            </label>
+
+            <label class="notification-secret-clear">
+                <input
+                    id="notificationDiscordWebhookUrlClear"
+                    type="checkbox">
+                <span>Clear saved webhook URL</span>
             </label>
 
             <span class="alert-setting-help">
@@ -818,6 +825,13 @@
                     placeholder="User key">
             </label>
 
+            <label class="notification-secret-clear">
+                <input
+                    id="notificationPushoverUserKeyClear"
+                    type="checkbox">
+                <span>Clear saved user key</span>
+            </label>
+
             <label class="notification-field">
                 <span>Application API Token</span>
 
@@ -827,6 +841,13 @@
                     type="password"
                     autocomplete="off"
                     placeholder="API token">
+            </label>
+
+            <label class="notification-secret-clear">
+                <input
+                    id="notificationPushoverApiTokenClear"
+                    type="checkbox">
+                <span>Clear saved API token</span>
             </label>
 
             <span class="alert-setting-help">
@@ -874,6 +895,13 @@
                     type="password"
                     autocomplete="off"
                     placeholder="Application token">
+            </label>
+
+            <label class="notification-secret-clear">
+                <input
+                    id="notificationGotifyTokenClear"
+                    type="checkbox">
+                <span>Clear saved application token</span>
             </label>
 
             <span class="alert-setting-help">
@@ -933,6 +961,13 @@
                     placeholder="tk_...">
             </label>
 
+            <label class="notification-secret-clear">
+                <input
+                    id="notificationNtfyTokenClear"
+                    type="checkbox">
+                <span>Clear saved access token</span>
+            </label>
+
             <span class="alert-setting-help">
                 Send dashboard alerts through an
                 ntfy server. Access tokens are optional
@@ -965,9 +1000,16 @@
                 <input
                     id="notificationWebhookUrl"
                     class="alert-setting-input"
-                    type="text"
+                    type="password"
                     autocomplete="off"
                     placeholder="https://example.com/webhook">
+            </label>
+
+            <label class="notification-secret-clear">
+                <input
+                    id="notificationWebhookUrlClear"
+                    type="checkbox">
+                <span>Clear saved webhook URL</span>
             </label>
 
             <span class="alert-setting-help">
