@@ -20,6 +20,25 @@ RANGES = {
 }
 
 
+class _TOFUPolicy(
+    paramiko.MissingHostKeyPolicy
+):
+    """Remember the first SSH host key until authentication succeeds."""
+
+    def __init__(self):
+        self.hostname = None
+        self.key = None
+
+    def missing_host_key(
+        self,
+        client,
+        hostname,
+        key,
+    ):
+        self.hostname = hostname
+        self.key = key
+
+
 class AdvancedCollector:
     def __init__(self, db_path, retention_days=30):
         self.db_path = db_path
@@ -46,6 +65,11 @@ class AdvancedCollector:
 
         self.password = os.environ.get(
             "SSH_PASSWORD", ""
+        )
+
+        self.known_hosts_path = os.path.join(
+            os.path.dirname(self.db_path),
+            "ssh_known_hosts",
         )
 
         self.poll_seconds = max(
@@ -525,9 +549,23 @@ class AdvancedCollector:
 
         client = paramiko.SSHClient()
 
-        client.set_missing_host_key_policy(
-            paramiko.AutoAddPolicy()
-        )
+        tofu_policy = None
+
+        if os.path.exists(
+            self.known_hosts_path
+        ):
+            client.load_host_keys(
+                self.known_hosts_path
+            )
+            client.set_missing_host_key_policy(
+                paramiko.RejectPolicy()
+            )
+        else:
+            tofu_policy = _TOFUPolicy()
+
+            client.set_missing_host_key_policy(
+                tofu_policy
+            )
 
         client.connect(
             hostname=self.host,
@@ -542,6 +580,23 @@ class AdvancedCollector:
             look_for_keys=False,
             allow_agent=False,
         )
+
+        if (
+            tofu_policy is not None
+            and tofu_policy.hostname is not None
+            and tofu_policy.key is not None
+        ):
+            host_keys = paramiko.HostKeys()
+
+            host_keys.add(
+                tofu_policy.hostname,
+                tofu_policy.key.get_name(),
+                tofu_policy.key,
+            )
+
+            host_keys.save(
+                self.known_hosts_path
+            )
 
         return client
 

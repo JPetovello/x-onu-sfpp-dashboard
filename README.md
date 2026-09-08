@@ -608,6 +608,18 @@ Password used for SSH authentication.
 
 The password is not stored in the dashboard SQLite database and is not returned by the dashboard APIs.
 
+#### SSH Host Key Verification
+
+SSH host keys use trust on first use (TOFU).
+
+After the first successful SSH authentication, the dashboard stores the ONT host key in:
+
+    /data/ssh_known_hosts
+
+Future SSH connections require the ONT to present the same host key. If the host key changes, advanced SSH telemetry rejects the connection instead of automatically trusting the new key.
+
+Because the initial connection uses TOFU, the first host key is not independently authenticated. The persistent `/data` directory must be preserved across container updates to retain host key verification.
+
 #### SSH_POLL_SECONDS
 
 Default:
