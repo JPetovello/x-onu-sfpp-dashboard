@@ -59,6 +59,7 @@ DEFAULT_ALERT_CONFIG = {
         "decreased_severity": "info",
     },
     "core_reachability": {
+        "failure_samples": 3,
         "unreachable_severity": "critical",
         "recovered_severity": "info",
     },
@@ -609,6 +610,13 @@ class AlertManager:
             "core_reachability",
         )
 
+        require_int(
+            reachability["failure_samples"],
+            "core_reachability.failure_samples",
+            minimum=1,
+            maximum=1000,
+        )
+
         for key in (
             "unreachable_severity",
             "recovered_severity",
@@ -801,6 +809,27 @@ class AlertManager:
                     config = json.loads(
                         row["config_json"]
                     )
+
+                    if isinstance(
+                        config,
+                        dict,
+                    ):
+                        reachability = (
+                            config.get(
+                                "core_reachability"
+                            )
+                        )
+
+                        if isinstance(
+                            reachability,
+                            dict,
+                        ):
+                            reachability.setdefault(
+                                "failure_samples",
+                                DEFAULT_ALERT_CONFIG[
+                                    "core_reachability"
+                                ]["failure_samples"],
+                            )
 
                     config = (
                         self.validate_config(
@@ -1520,8 +1549,18 @@ class AlertManager:
             "core_reachability",
         )
 
+        pending_key = (
+            "core_reachability",
+        )
+
         current = bool(
             online
+        )
+
+        failure_samples = (
+            ALERT_CONFIG[
+                "core_reachability"
+            ]["failure_samples"]
         )
 
         with self.lock:
@@ -1529,45 +1568,27 @@ class AlertManager:
                 state_key
             )
 
-            self.previous[state_key] = (
-                current
-            )
-
-        if previous is None:
-            if current:
-                return
-
-            message = (
-                "Core telemetry is unreachable "
-                "at startup"
-            )
-
-            if error:
-                message += (
-                    f": {error}"
+        if current:
+            with self.lock:
+                self.pending.pop(
+                    pending_key,
+                    None,
                 )
 
-            self._record_event(
-                ts=ts,
-                alert_type="core_unreachable",
-                severity=(
-                    ALERT_CONFIG[
-                        "core_reachability"
-                    ]["unreachable_severity"]
-                ),
-                metric="online",
-                previous_value=None,
-                current_value=0,
-                delta=None,
-                message=message,
-            )
+                if previous is None:
+                    self.previous[state_key] = (
+                        True
+                    )
 
-            return
+                    return
 
-        if current == previous:
-            return
+                if previous:
+                    return
 
-        if current:
+                self.previous[state_key] = (
+                    True
+                )
+
             self._record_event(
                 ts=ts,
                 alert_type="core_recovered",
@@ -1588,10 +1609,62 @@ class AlertManager:
 
             return
 
-        message = (
-            "Core telemetry became "
-            "unreachable"
-        )
+        with self.lock:
+            if previous is False:
+                self.pending.pop(
+                    pending_key,
+                    None,
+                )
+
+                return
+
+            pending = self.pending.get(
+                pending_key
+            )
+
+            if pending is None:
+                pending = {
+                    "count": 1,
+                }
+            else:
+                pending["count"] += 1
+
+            self.pending[pending_key] = (
+                pending
+            )
+
+            count = pending["count"]
+
+        if count < failure_samples:
+            return
+
+        with self.lock:
+            self.pending.pop(
+                pending_key,
+                None,
+            )
+
+            self.previous[state_key] = (
+                False
+            )
+
+        if previous is None:
+            message = (
+                "Core telemetry is unreachable "
+                "at startup"
+            )
+
+            previous_value = None
+            delta = None
+
+        else:
+            message = (
+                "Core telemetry became "
+                "unreachable"
+            )
+
+            previous_value = 1
+            delta = -1
 
         if error:
             message += (
@@ -1607,12 +1680,11 @@ class AlertManager:
                 ]["unreachable_severity"]
             ),
             metric="online",
-            previous_value=1,
+            previous_value=previous_value,
             current_value=0,
-            delta=-1,
+            delta=delta,
             message=message,
         )
-
 
     def _process_ploam_state(
         self,

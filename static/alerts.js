@@ -319,6 +319,11 @@ function renderAlertConfig(config) {
     );
 
     setAlertValue(
+        "alertReachabilityFailureSamples",
+        config.core_reachability?.failure_samples
+    );
+
+    setAlertValue(
         "alertReachabilityUnreachableSeverity",
         config.core_reachability?.unreachable_severity
     );
@@ -510,6 +515,12 @@ function markBackendErrorFields(message) {
     if (lower.includes("warning_samples")) {
         markAlertInvalid(
             "alertWarningSamples"
+        );
+    }
+
+    if (lower.includes("failure_samples")) {
+        markAlertInvalid(
+            "alertReachabilityFailureSamples"
         );
     }
 
@@ -745,6 +756,14 @@ async function saveAlertConfig() {
             readSelect(
                 "alertActiveAlarmClearedSeverity",
                 "Active alarm cleared severity"
+            );
+
+        config.core_reachability.failure_samples =
+            readInteger(
+                "alertReachabilityFailureSamples",
+                "ONT reachability failure samples",
+                1,
+                1000
             );
 
         config.core_reachability.unreachable_severity =

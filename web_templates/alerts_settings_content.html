@@ -376,6 +376,24 @@
             <div class="alert-threshold-list">
 
                 <label class="alert-threshold-row">
+                    <span>Failure debounce</span>
+
+                    <div class="alert-setting-control">
+                        <input
+                            id="alertReachabilityFailureSamples"
+                            class="alert-setting-input"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value="3">
+
+                        <span class="alert-setting-unit">
+                            samples
+                        </span>
+                    </div>
+                </label>
+
+                <label class="alert-threshold-row">
                     <span>Unreachable</span>
 
                     <select
@@ -406,9 +424,9 @@
             </div>
 
             <span class="alert-setting-help">
-                Alert when the dashboard loses
-                communication with the ONT and when
-                connectivity returns.
+                Consecutive failed telemetry samples
+                required before the ONT is considered
+                unreachable. Recovery is immediate.
             </span>
         </div>
 
