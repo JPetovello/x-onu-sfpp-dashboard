@@ -221,6 +221,14 @@ The first observed alarm count establishes the initial baseline and does not by 
 
 ONT reachability monitors the core JSON telemetry connection independently from optional SSH telemetry.
 
+**Failure debounce** controls how many consecutive failed core telemetry samples are required before the ONT is considered unreachable.
+
+Default:
+
+    3 samples
+
+A successful telemetry sample before the debounce threshold is reached clears the pending failures without generating an unreachable or recovery event. After an outage has been confirmed, the first successful telemetry sample generates the recovery event immediately.
+
 **Unreachable** controls the severity used when the core metrics endpoint becomes unreachable.
 
 Default severity:
