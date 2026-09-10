@@ -1359,8 +1359,6 @@ pontop -b -g 'Optical Interface Info'
 
     def _loop(self):
 
-        cleanup_counter = 0
-
         while True:
 
             started = (
@@ -1368,25 +1366,6 @@ pontop -b -g 'Optical Interface Info'
             )
 
             self.collect_once()
-
-            cleanup_counter += 1
-
-            if cleanup_counter >= max(
-                1,
-                int(
-                    3600
-                    /
-                    self.poll_seconds
-                ),
-            ):
-
-                try:
-                    self._cleanup()
-
-                except Exception:
-                    pass
-
-                cleanup_counter = 0
 
             elapsed = (
                 time.monotonic()

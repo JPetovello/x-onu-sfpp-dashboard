@@ -9,11 +9,13 @@ import urllib3
 from flask import Flask, jsonify, render_template, request
 
 from advanced import AdvancedCollector
+from retention import RetentionManager
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 DB_PATH = os.path.join(DATA_DIR, "metrics.db")
+DATABASE_EXISTED_AT_STARTUP = os.path.exists(DB_PATH)
 
 ONT_URL = os.environ.get(
     "ONT_URL",
@@ -150,16 +152,7 @@ def save_sample(metrics, ts):
 
 
 def cleanup_old_samples():
-    cutoff = (
-        datetime.now(timezone.utc)
-        - timedelta(days=RETENTION_DAYS)
-    )
-
-    with db_connect() as con:
-        con.execute(
-            "DELETE FROM samples WHERE ts < ?",
-            (cutoff.isoformat(),),
-        )
+    retention_manager.cleanup()
 
 
 
@@ -467,7 +460,9 @@ def api_info():
     return jsonify({
         "ont_url": ONT_URL,
         "poll_seconds": POLL_SECONDS,
-        "retention_days": RETENTION_DAYS,
+        "retention_days": retention_manager.get_config()[
+            "telemetry_days"
+        ],
         "database": DB_PATH,
         **dict(row),
     })
@@ -627,7 +622,53 @@ def api_notification_config():
 
 
 
+@app.route(
+    "/api/retention-config",
+    methods=["GET", "PUT"],
+)
+def api_retention_config():
+    if request.method == "GET":
+        return jsonify(
+            retention_manager.get_config()
+        )
+
+    config = request.get_json(
+        silent=True
+    )
+
+    if config is None:
+        return jsonify(
+            {
+                "error": (
+                    "Request body must contain "
+                    "a JSON object"
+                )
+            }
+        ), 400
+
+    try:
+        saved_config = retention_manager.save_config(
+            config
+        )
+    except ValueError as exc:
+        return jsonify(
+            {
+                "error": str(exc)
+            }
+        ), 400
+
+    return jsonify(
+        saved_config
+    )
+
+
 init_db()
+
+retention_manager = RetentionManager(
+    DB_PATH,
+    legacy_telemetry_days=RETENTION_DAYS,
+    new_install=not DATABASE_EXISTED_AT_STARTUP,
+)
 
 advanced_collector = AdvancedCollector(
     DB_PATH,

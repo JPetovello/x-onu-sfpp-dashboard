@@ -19,6 +19,7 @@ Core telemetry does not require SSH and includes:
 - Historical optical and temperature charts
 - 1 hour, 6 hour, 24 hour, 7 day, and 30 day history
 - Persistent history-range selection
+- Configurable telemetry and alert-history retention
 
 Optional advanced SSH telemetry adds:
 
@@ -451,6 +452,40 @@ Anyone with a Discord webhook URL may be able to post messages to the associated
 
 If another notification credential or private endpoint is exposed, revoke, rotate, or replace it when supported by the notification service.
 
+## Data Retention
+
+Telemetry and alert-history retention can be configured from the **Data Retention** panel on the **Alerts & Notifications** page.
+
+Telemetry retention applies to both standard and advanced telemetry samples.
+
+Available telemetry retention periods are:
+
+- 7 days
+- 30 days
+- 60 days
+- 90 days
+- 180 days
+- 1 year
+- Unlimited
+
+New installations default to **90 days** of telemetry history.
+
+Alert-history retention can be configured separately.
+
+Available alert-history retention periods are:
+
+- 30 days
+- 90 days
+- 180 days
+- 1 year
+- Unlimited
+
+New installations default to **1 year** of alert history.
+
+Expired records are removed automatically. Selecting **Unlimited** disables automatic cleanup for that data type.
+
+Existing installations preserve their effective telemetry retention setting during upgrade rather than being silently changed to the new-install default.
+
 ## Requirements
 
 An ONT running compatible 8311 community firmware with the metrics endpoint available at:
@@ -481,7 +516,6 @@ Basic installation without SSH telemetry:
       -p 8766:8080 \
       -e ONT_URL="https://192.168.11.1/cgi-bin/luci/8311/metrics" \
       -e POLL_SECONDS="10" \
-      -e RETENTION_DAYS="30" \
       -e REQUEST_TIMEOUT="5" \
       -e DATA_DIR="/data" \
       -e SSH_ENABLED="false" \
@@ -500,7 +534,6 @@ To enable advanced monitoring, provide SSH connection details for the ONT:
       -p 8766:8080 \
       -e ONT_URL="https://192.168.11.1/cgi-bin/luci/8311/metrics" \
       -e POLL_SECONDS="10" \
-      -e RETENTION_DAYS="30" \
       -e REQUEST_TIMEOUT="5" \
       -e DATA_DIR="/data" \
       -e SSH_ENABLED="true" \
@@ -550,11 +583,11 @@ Number of seconds between core ONT metric requests.
 
 #### RETENTION_DAYS
 
-Default:
+Legacy compatibility setting used when upgrading an existing installation that does not yet have a saved retention configuration.
 
-    30
+The existing value is used to preserve the installation's effective telemetry retention period during migration.
 
-Number of days of historical telemetry samples to retain.
+For new installations, telemetry retention is configured from the dashboard and defaults to **90 days**. After a retention configuration has been saved in the dashboard database, use the **Data Retention** panel rather than this environment variable to manage retention.
 
 #### REQUEST_TIMEOUT
 
@@ -654,7 +687,7 @@ Maximum time allowed for advanced telemetry commands.
 
 ## Persistent Data
 
-Historical samples, alert configuration, notification configuration, and alert events are stored in an SQLite database at:
+Historical samples, alert configuration, notification configuration, retention configuration, and alert events are stored in an SQLite database at:
 
     /data/metrics.db
 
@@ -672,9 +705,9 @@ Existing telemetry history is preserved during upgrade.
 
 Existing installations can continue using the same persistent `/data` directory.
 
-On startup, V3 creates the additional database structures required for alert events, alert configuration, and notification configuration if they do not already exist.
+On startup, V3 creates the additional database structures required for alert events, alert configuration, notification configuration, and retention configuration if they do not already exist.
 
-Existing core and advanced telemetry history is preserved.
+Existing core and advanced telemetry history is preserved. Existing installations also preserve their effective telemetry retention period when the retention configuration is created for the first time.
 
 After upgrading, review **Alert Settings** before enabling external notifications so the configured thresholds and severities are appropriate for your ONT and environment.
 
@@ -710,6 +743,7 @@ The dashboard displays:
 - Optical module information
 - Recent alert history
 - Configurable alert settings
+- Configurable telemetry and alert-history retention
 - Discord, ntfy, Gotify, Pushover, and Generic Webhook notification settings
 
 Advanced sections automatically show a disabled or unavailable state when SSH telemetry is not active.

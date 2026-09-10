@@ -1587,3 +1587,258 @@ if (
         30000
     );
 }
+
+/*
+ * Persist Alerts & Notifications collapsible panel state.
+ * This is a browser-local UI preference only.
+ */
+function initSettingsPanelPersistence() {
+    const panels = [
+        {
+            id: "alertSettingsPanel",
+            storageKey: "xonu.alertSettingsPanel.open",
+        },
+        {
+            id: "notificationSettingsPanel",
+            storageKey: "xonu.notificationSettingsPanel.open",
+        },
+        {
+            id: "retentionSettingsPanel",
+            storageKey: "xonu.retentionSettingsPanel.open",
+        },
+    ];
+
+    panels.forEach(({ id, storageKey }) => {
+        const panel = document.getElementById(id);
+
+        if (!panel) {
+            return;
+        }
+
+        try {
+            const savedState = localStorage.getItem(storageKey);
+
+            if (savedState === "true") {
+                panel.open = true;
+            } else if (savedState === "false") {
+                panel.open = false;
+            }
+        } catch (error) {
+            console.warn(
+                "Unable to restore settings panel state:",
+                error
+            );
+        }
+
+        panel.addEventListener("toggle", () => {
+            try {
+                localStorage.setItem(
+                    storageKey,
+                    panel.open ? "true" : "false"
+                );
+            } catch (error) {
+                console.warn(
+                    "Unable to save settings panel state:",
+                    error
+                );
+            }
+        });
+    });
+}
+
+initSettingsPanelPersistence();
+
+/*
+ * Data retention settings.
+ */
+function retentionValueForSelect(value) {
+    return value === null
+        ? "unlimited"
+        : String(value);
+}
+
+function retentionValueForApi(value) {
+    return value === "unlimited"
+        ? null
+        : Number(value);
+}
+
+async function loadRetentionConfig() {
+    const telemetry =
+        getAlertElement("retentionTelemetryDays");
+
+    const alerts =
+        getAlertElement("retentionAlertDays");
+
+    if (!telemetry || !alerts) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/retention-config"
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const config = await response.json();
+
+        const telemetryValue =
+            retentionValueForSelect(
+                config.telemetry_days
+            );
+
+        const telemetryOptionExists =
+            Array.from(telemetry.options).some(
+                (option) =>
+                    option.value === telemetryValue
+            );
+
+        if (!telemetryOptionExists) {
+            const option =
+                document.createElement("option");
+
+            option.value = telemetryValue;
+            option.textContent =
+                `${config.telemetry_days} days (current)`;
+
+            telemetry.appendChild(option);
+        }
+
+        telemetry.value = telemetryValue;
+
+        alerts.value = retentionValueForSelect(
+            config.alert_days
+        );
+
+        const status =
+            getAlertElement("retentionSettingsStatus");
+
+        if (status) {
+            status.textContent = "Settings loaded";
+            status.className =
+                "advanced-status good";
+        }
+    } catch (error) {
+        console.error(
+            "Unable to load retention settings:",
+            error
+        );
+
+        const status =
+            getAlertElement("retentionSettingsStatus");
+
+        if (status) {
+            status.textContent =
+                "Settings unavailable";
+            status.className =
+                "advanced-status bad";
+        }
+    }
+}
+
+async function saveRetentionConfig() {
+    const telemetry =
+        getAlertElement("retentionTelemetryDays");
+
+    const alerts =
+        getAlertElement("retentionAlertDays");
+
+    const status =
+        getAlertElement("retentionSettingsStatus");
+
+    const button =
+        getAlertElement("retentionSaveSettings");
+
+    if (!telemetry || !alerts) {
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+    }
+
+    if (status) {
+        status.textContent = "Saving...";
+        status.className =
+            "advanced-status";
+    }
+
+    try {
+        const response = await fetch(
+            "/api/retention-config",
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    telemetry_days:
+                        retentionValueForApi(
+                            telemetry.value
+                        ),
+                    alert_days:
+                        retentionValueForApi(
+                            alerts.value
+                        ),
+                }),
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.error ||
+                `HTTP ${response.status}`
+            );
+        }
+
+        telemetry.value = retentionValueForSelect(
+            result.telemetry_days
+        );
+
+        alerts.value = retentionValueForSelect(
+            result.alert_days
+        );
+
+        if (status) {
+            status.textContent =
+                "Settings saved";
+            status.className =
+                "advanced-status good";
+        }
+    } catch (error) {
+        console.error(
+            "Unable to save retention settings:",
+            error
+        );
+
+        if (status) {
+            status.textContent =
+                "Unable to save retention settings";
+            status.className =
+                "advanced-status bad";
+        }
+    } finally {
+        if (button) {
+            button.disabled = false;
+        }
+    }
+}
+
+const retentionSaveSettings =
+    getAlertElement("retentionSaveSettings");
+
+if (retentionSaveSettings) {
+    retentionSaveSettings.addEventListener(
+        "click",
+        saveRetentionConfig
+    );
+
+    loadRetentionConfig();
+}
