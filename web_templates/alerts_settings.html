@@ -11,6 +11,8 @@
     Alerts & Notifications - X-ONU-SFPP Dashboard
 </title>
 
+<script src="/static/theme.js"></script>
+
 <link
     rel="stylesheet"
     href="/static/style.css">
@@ -36,12 +38,30 @@
         </p>
     </div>
 
-    <div class="settings-page-nav">
-        <a
-            href="/"
-            class="settings-nav-link">
-            ← Back to Dashboard
-        </a>
+    <div class="topbar-actions">
+
+        <label class="theme-control">
+            <span class="theme-control-label">
+                Theme
+            </span>
+
+            <select
+                id="themeSelector"
+                class="theme-select">
+                <option value="system">System</option>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+            </select>
+        </label>
+
+        <div class="settings-page-nav">
+            <a
+                href="/"
+                class="settings-nav-link">
+                ← Back to Dashboard
+            </a>
+        </div>
+
     </div>
 
 </header>

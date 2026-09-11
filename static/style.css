@@ -5,10 +5,35 @@
     --panel: #12171e;
     --panel-alt: #0f141a;
     --panel-soft: rgba(18, 23, 30, .88);
+    --status-bg: rgba(18, 23, 30, .82);
 
     --text: #f2f5f7;
     --muted: #8e9aa8;
     --line: #29323d;
+    --border: var(--line);
+
+    --body-glow: #172231;
+
+    --surface-top: rgba(23, 29, 37, .95);
+    --surface-bottom: rgba(15, 19, 25, .97);
+    --surface-soft: rgba(9, 13, 18, .35);
+
+    --primary-top: rgba(31, 48, 72, .95);
+    --primary-bottom: rgba(16, 21, 28, .98);
+
+    --traffic-top: rgba(31, 48, 72, .78);
+    --traffic-bottom: rgba(13, 18, 24, .97);
+
+    --button-bg: #10151b;
+    --button-hover-border: #3b4858;
+    --button-active-border: #4d6f9e;
+    --button-active-bg: #1c2b3f;
+    --button-active-text: #ffffff;
+
+    --overlay-025: rgba(255, 255, 255, .025);
+    --overlay-035: rgba(255, 255, 255, .035);
+    --overlay-050: rgba(255, 255, 255, .05);
+    --overlay-080: rgba(255, 255, 255, .08);
 
     --good: #48d597;
     --warn: #ffbd5a;
@@ -22,6 +47,44 @@
     --cpu2: #ff83b2;
     --download: #69a7ff;
     --upload: #48d597;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bg: #eef3f8;
+    --panel: #ffffff;
+    --panel-alt: #f7f9fc;
+    --panel-soft: rgba(255, 255, 255, .92);
+    --status-bg: rgba(255, 255, 255, .88);
+
+    --text: #17202a;
+    --muted: #667281;
+    --line: #cfd8e3;
+    --border: var(--line);
+
+    --body-glow: #dfeaf7;
+
+    --surface-top: rgba(255, 255, 255, .98);
+    --surface-bottom: rgba(245, 248, 252, .98);
+    --surface-soft: rgba(255, 255, 255, .72);
+
+    --primary-top: rgba(225, 237, 252, .98);
+    --primary-bottom: rgba(248, 250, 253, .98);
+
+    --traffic-top: rgba(227, 239, 253, .95);
+    --traffic-bottom: rgba(248, 250, 253, .98);
+
+    --button-bg: #f7f9fc;
+    --button-hover-border: #9eabb9;
+    --button-active-border: #6f8db5;
+    --button-active-bg: #dfeaf7;
+    --button-active-text: #17202a;
+
+    --overlay-025: rgba(0, 0, 0, .025);
+    --overlay-035: rgba(0, 0, 0, .035);
+    --overlay-050: rgba(0, 0, 0, .05);
+    --overlay-080: rgba(0, 0, 0, .08);
 }
 
 
@@ -43,7 +106,7 @@ body {
     background:
         radial-gradient(
             circle at 50% -18%,
-            #172231 0,
+            var(--body-glow) 0,
             var(--bg) 44%
         );
 
@@ -162,12 +225,7 @@ footer {
         13px 16px;
 
     background:
-        rgba(
-            18,
-            23,
-            30,
-            .82
-        );
+        var(--status-bg);
 
     border:
         1px solid
@@ -311,8 +369,8 @@ footer {
     background:
         linear-gradient(
             180deg,
-            rgba(23,29,37,.95),
-            rgba(15,19,25,.97)
+            var(--surface-top),
+            var(--surface-bottom)
         );
 
     border:
@@ -373,12 +431,7 @@ footer {
     overflow: hidden;
 
     background:
-        rgba(
-            9,
-            13,
-            18,
-            .35
-        );
+        var(--surface-soft);
 
     border:
         1px solid
@@ -393,8 +446,8 @@ footer {
     background:
         linear-gradient(
             155deg,
-            rgba(31,48,72,.95),
-            rgba(16,21,28,.98)
+            var(--primary-top),
+            var(--primary-bottom)
         );
 }
 
@@ -486,12 +539,7 @@ footer {
     padding: 15px;
 
     background:
-        rgba(
-            9,
-            13,
-            18,
-            .35
-        );
+        var(--surface-soft);
 
     border:
         1px solid
@@ -547,12 +595,7 @@ footer {
     border-radius: 9px;
 
     background:
-        rgba(
-            9,
-            13,
-            18,
-            .35
-        );
+        var(--surface-soft);
 }
 
 
@@ -600,8 +643,8 @@ footer {
     background:
         linear-gradient(
             155deg,
-            rgba(31,48,72,.78),
-            rgba(13,18,24,.97)
+            var(--traffic-top),
+            var(--traffic-bottom)
         );
 
     border:
@@ -717,12 +760,7 @@ footer {
         10px 13px;
 
     background:
-        rgba(
-            9,
-            13,
-            18,
-            .35
-        );
+        var(--surface-soft);
 
     border:
         1px solid
@@ -786,7 +824,7 @@ button {
         var(--line);
 
     background:
-        #10151b;
+        var(--button-bg);
 
     color:
         var(--muted);
@@ -813,18 +851,19 @@ button:hover {
     color: var(--text);
 
     border-color:
-        #3b4858;
+        var(--button-hover-border);
 }
 
 
 button.active {
-    color: white;
+    color:
+        var(--button-active-text);
 
     border-color:
-        #4d6f9e;
+        var(--button-active-border);
 
     background:
-        #1c2b3f;
+        var(--button-active-bg);
 }
 
 
@@ -955,12 +994,7 @@ canvas {
     border-radius: 10px;
 
     background:
-        rgba(
-            9,
-            13,
-            18,
-            .35
-        );
+        var(--surface-soft);
 }
 
 
@@ -1168,12 +1202,7 @@ footer {
     padding: 14px;
 
     background:
-        rgba(
-            9,
-            13,
-            18,
-            .35
-        );
+        var(--surface-soft);
 
     border:
         1px solid
@@ -1274,12 +1303,7 @@ footer {
         12px 14px;
 
     background:
-        rgba(
-            9,
-            13,
-            18,
-            .35
-        );
+        var(--surface-soft);
 
     border:
         1px solid
@@ -1418,7 +1442,7 @@ footer {
         var(--border);
     border-radius: 12px;
     background:
-        rgba(255, 255, 255, 0.025);
+        var(--overlay-025);
 }
 
 .alert-setting-label {
@@ -1472,7 +1496,7 @@ footer {
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 9px;
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--overlay-035);
     color: var(--text);
     font: inherit;
     font-weight: 700;
@@ -1498,7 +1522,7 @@ footer {
     padding: 9px 14px;
     border: 1px solid var(--border);
     border-radius: 9px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--overlay-050);
     color: var(--text);
     font: inherit;
     font-weight: 700;
@@ -1506,7 +1530,7 @@ footer {
 }
 
 .alert-settings-save:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--overlay-080);
 }
 
 .alert-settings-save:disabled {
@@ -1613,7 +1637,7 @@ footer {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     background:
-        rgba(255, 255, 255, 0.025);
+        var(--overlay-025);
 }
 
 .alert-counter-name {
@@ -1703,7 +1727,7 @@ footer {
 .notification-settings-section {
     margin-top: 22px;
     padding-top: 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--overlay-080);
 }
 
 .notification-settings-stack {
@@ -1712,7 +1736,7 @@ footer {
 
 .notification-provider-row {
     padding: 14px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--overlay-080);
 }
 
 .notification-provider-row:first-child {
@@ -1959,4 +1983,103 @@ footer {
     max-height: none;
     overflow: visible;
     padding-right: 0;
+}
+
+/* Theme selector */
+
+.topbar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    min-width: 230px;
+}
+
+.theme-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    padding:
+        9px 12px;
+
+    background:
+        var(--status-bg);
+
+    border:
+        1px solid
+        var(--line);
+
+    border-radius:
+        10px;
+}
+
+.theme-control-label {
+    color: var(--muted);
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    letter-spacing:
+        .055em;
+
+    text-transform:
+        uppercase;
+}
+
+.theme-select {
+    min-width: 92px;
+
+    padding:
+        6px 8px;
+
+    background:
+        var(--button-bg);
+
+    color:
+        var(--text);
+
+    border:
+        1px solid
+        var(--line);
+
+    border-radius:
+        8px;
+
+    font: inherit;
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+
+    cursor:
+        pointer;
+}
+
+.theme-select:hover {
+    border-color:
+        var(--button-hover-border);
+}
+
+.theme-select:focus {
+    outline: none;
+
+    border-color:
+        var(--accent);
+}
+
+@media (max-width: 680px) {
+
+    .topbar-actions {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .theme-control {
+        width: 100%;
+    }
 }

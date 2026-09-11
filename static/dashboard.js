@@ -2258,3 +2258,10 @@ setInterval(
     refreshHistory,
     30000
 );
+
+window.addEventListener(
+    "xonu-theme-change",
+    () => {
+        drawAllCharts();
+    }
+);
