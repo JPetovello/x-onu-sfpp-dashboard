@@ -9,6 +9,8 @@
 
 <title>X-ONU-SFPP Dashboard</title>
 
+<script src="/static/theme.js"></script>
+
 <link
     rel="stylesheet"
     href="/static/style.css">
@@ -42,25 +44,43 @@
         </div>
     </div>
 
-    <div class="status-wrap">
+    <div class="topbar-actions">
 
-        <span
-            id="statusDot"
-            class="status-dot offline">
-        </span>
+        <label class="theme-control">
+            <span class="theme-control-label">
+                Theme
+            </span>
 
-        <div>
-            <div
-                id="statusText"
-                class="status-text">
-                CONNECTING...
+            <select
+                id="themeSelector"
+                class="theme-select">
+                <option value="system">System</option>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+            </select>
+        </label>
+
+        <div class="status-wrap">
+
+            <span
+                id="statusDot"
+                class="status-dot offline">
+            </span>
+
+            <div>
+                <div
+                    id="statusText"
+                    class="status-text">
+                    CONNECTING...
+                </div>
+
+                <div
+                    id="lastUpdate"
+                    class="last-update">
+                    Waiting for first sample
+                </div>
             </div>
 
-            <div
-                id="lastUpdate"
-                class="last-update">
-                Waiting for first sample
-            </div>
         </div>
 
     </div>
