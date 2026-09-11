@@ -1459,7 +1459,7 @@ async function saveNotificationConfig() {
 async function loadAlerts() {
     try {
         const response = await fetch(
-            "/api/alerts?limit=25",
+            "/api/alerts?limit=3",
             {
                 cache: "no-store",
             }

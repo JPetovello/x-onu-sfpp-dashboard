@@ -2293,6 +2293,7 @@ class AlertManager:
     def recent_events(
         self,
         limit=100,
+        offset=0,
     ):
         limit = max(
             1,
@@ -2300,6 +2301,11 @@ class AlertManager:
                 int(limit),
                 1000,
             ),
+        )
+
+        offset = max(
+            0,
+            int(offset),
         )
 
         with self._connect_db() as con:
@@ -2318,9 +2324,11 @@ class AlertManager:
                 FROM alert_events
                 ORDER BY ts DESC
                 LIMIT ?
+                OFFSET ?
                 """,
                 (
                     limit,
+                    offset,
                 ),
             ).fetchall()
 
@@ -2328,3 +2336,14 @@ class AlertManager:
             dict(row)
             for row in rows
         ]
+
+    def event_count(self):
+        with self._connect_db() as con:
+            row = con.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM alert_events
+                """
+            ).fetchone()
+
+        return int(row["count"])
