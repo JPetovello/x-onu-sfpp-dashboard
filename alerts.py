@@ -138,6 +138,15 @@ ALERT_CONFIG = deepcopy(
 
 
 class AlertManager:
+    """Evaluate telemetry and persist alert state/events.
+
+    Alert detection is stateful. The manager tracks previous observations,
+    pending counter deltas, and cooldown timestamps so cumulative ONT counters
+    generate events only when new errors occur.
+
+    Event storage is kept separate from external notification delivery.
+    """
+
     def __init__(self, db_path):
         self.db_path = db_path
         self.lock = threading.Lock()
@@ -980,6 +989,13 @@ class AlertManager:
         delta,
         message,
     ):
+        """Persist an alert before attempting external notification delivery.
+
+        Notification failures are intentionally contained so an alert that was
+        successfully detected and stored remains part of history even when an
+        external provider is unavailable or misconfigured.
+        """
+
         with self._connect_db() as con:
             con.execute(
                 """
@@ -1040,6 +1056,16 @@ class AlertManager:
         min_delta=1,
         cooldown_seconds=0,
     ):
+        """Process a cumulative counter using deltas rather than absolute value.
+
+        The first observation establishes a baseline. Positive deltas may be
+        accumulated while a cooldown is active, and a later flat sample may
+        flush that pending increase once the cooldown expires.
+
+        A decreasing counter is treated as a reset or ONT reboot and clears
+        any pending delta instead of creating a false alert.
+        """
+
         current = metrics.get(
             metric_name
         )
@@ -2210,6 +2236,8 @@ class AlertManager:
         ts,
         metrics,
     ):
+        """Evaluate alerts derived from a successful core telemetry sample."""
+
         self._process_core_reachability(
             ts=ts,
             online=True,
@@ -2241,6 +2269,8 @@ class AlertManager:
         ts,
         error=None,
     ):
+        """Record core-collector reachability state when collection fails."""
+
         self._process_core_reachability(
             ts=ts,
             online=False,
@@ -2253,6 +2283,8 @@ class AlertManager:
         ts,
         metrics,
     ):
+        """Evaluate alerts derived from one advanced SSH telemetry sample."""
+
         self._process_gem_key_errors(
             ts,
             metrics,

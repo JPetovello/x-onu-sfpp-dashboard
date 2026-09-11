@@ -21,6 +21,14 @@ ALERT_RETENTION_OPTIONS = {
 
 
 class RetentionManager:
+    """Manage telemetry and alert-history retention settings and cleanup.
+
+    New installations use the dashboard's current retention defaults. Existing
+    installations without saved dashboard-managed retention configuration keep
+    their legacy telemetry retention value so an upgrade does not silently
+    change established data-retention behavior.
+    """
+
     def __init__(
         self,
         db_path,
@@ -45,6 +53,12 @@ class RetentionManager:
         return con
 
     def _default_config(self):
+        """Return defaults appropriate for a new or migrated installation.
+
+        Existing installations inherit their legacy telemetry retention value;
+        new installations begin with the current dashboard default.
+        """
+
         if self.new_install:
             telemetry_days = 90
         else:
@@ -160,6 +174,14 @@ class RetentionManager:
         return value
 
     def save_config(self, config):
+        """Validate and persist retention configuration.
+
+        An unchanged legacy telemetry retention value is preserved even when it
+        is not one of the current selectable UI options. This allows upgraded
+        installations to retain their previous effective policy until the user
+        deliberately chooses a new value.
+        """
+
         if not isinstance(config, dict):
             raise ValueError(
                 "Retention configuration must be "
@@ -235,6 +257,8 @@ class RetentionManager:
         return saved
 
     def cleanup(self):
+        """Delete telemetry and alert events older than configured cutoffs."""
+
         config = self.get_config()
         now = datetime.now(timezone.utc)
 

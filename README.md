@@ -783,20 +783,9 @@ Advanced SSH telemetry is optional and can be enabled from the container setting
 
 Alert configuration and notification provider settings are managed from within the dashboard.
 
-## Building Locally
+## Development
 
-Clone the repository and build the image with:
-
-    docker build -t x-onu-dashboard .
-
-Then run it with:
-
-    docker run -d \
-      --name x-onu-dashboard \
-      --restart unless-stopped \
-      -p 8766:8080 \
-      -v ./data:/data \
-      x-onu-dashboard
+Developer documentation, architecture, and local build instructions are available in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Source
 

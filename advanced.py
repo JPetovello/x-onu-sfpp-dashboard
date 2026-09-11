@@ -40,6 +40,13 @@ class _TOFUPolicy(
 
 
 class AdvancedCollector:
+    """Collect optional advanced ONT telemetry over SSH.
+
+    Advanced collection is deliberately independent from the core 8311 JSON
+    collector. SSH failure therefore affects only advanced telemetry and must
+    not cause the dashboard to consider an otherwise reachable ONT offline.
+    """
+
     def __init__(self, db_path, retention_days=30):
         self.db_path = db_path
         self.retention_days = retention_days
@@ -382,6 +389,13 @@ class AdvancedCollector:
         gems,
         counters,
     ):
+        """Choose the GEM most likely to carry subscriber Ethernet traffic.
+
+        Prefer valid Ethernet GEMs, ignore reserved GEM ID 65534, and select
+        the candidate with the greatest combined byte count. The second pass
+        intentionally relaxes the allocation-status requirement because some
+        firmware states provide useful counters without reporting ``Valid``.
+        """
 
         candidates = [
             gem
@@ -540,6 +554,12 @@ class AdvancedCollector:
 
 
     def _ssh_client(self):
+        """Create an SSH connection using persistent trust-on-first-use.
+
+        On the first successful authenticated connection, the presented host
+        key is saved. Once a known-hosts file exists, unknown or changed keys
+        are rejected rather than silently replacing the trusted key.
+        """
 
         if not self.password:
 
@@ -1041,6 +1061,12 @@ pontop -b -g 'Optical Interface Info'
         metrics,
         now_epoch,
     ):
+        """Derive traffic rates from consecutive GEM byte-counter samples.
+
+        A new baseline is established when the selected GEM changes. Negative
+        deltas are ignored because an ONT reboot or GEM counter reset can make
+        cumulative byte counters decrease between polling cycles.
+        """
 
         if (
             metrics.get("us_bytes")
@@ -1245,6 +1271,13 @@ pontop -b -g 'Optical Interface Info'
 
 
     def collect_once(self):
+        """Perform one advanced collection cycle.
+
+        Collection, persistence, and in-memory state are updated before alert
+        processing. Alert-engine failures are deliberately contained so they
+        cannot turn successful SSH telemetry collection into a collector
+        failure.
+        """
 
         client = None
 
@@ -1358,6 +1391,7 @@ pontop -b -g 'Optical Interface Info'
 
 
     def _loop(self):
+        """Run collection continuously while maintaining the poll interval."""
 
         while True:
 

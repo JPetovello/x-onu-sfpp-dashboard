@@ -176,6 +176,16 @@ def fetch_metrics():
 
 
 def collector_loop():
+    """Continuously collect core 8311 telemetry and evaluate core alerts.
+
+    Core collection runs independently of optional SSH telemetry. Collection
+    failures update only core reachability state, while alert-processing or
+    persistence failures are contained so the polling loop keeps running.
+
+    Retention cleanup is triggered periodically from this loop rather than on
+    every sample.
+    """
+
     cleanup_counter = 0
 
     while True:
@@ -251,6 +261,7 @@ def collector_loop():
 
 
 def start_collector():
+    """Start the core telemetry collector as a daemon thread."""
 
     thread = threading.Thread(
         target=collector_loop,
@@ -687,6 +698,10 @@ def api_retention_config():
     )
 
 
+# Application services are created at module startup. The collectors below
+# therefore belong to this application process. Running multiple Gunicorn
+# worker processes without changing collector ownership would start duplicate
+# background collectors and duplicate alert evaluation.
 init_db()
 
 retention_manager = RetentionManager(
@@ -700,5 +715,8 @@ advanced_collector = AdvancedCollector(
     RETENTION_DAYS,
 )
 
+# The advanced collector owns the shared AlertManager used by both telemetry
+# paths. Core telemetry remains independently collected; only alert evaluation
+# is shared through that manager.
 start_collector()
 advanced_collector.start()

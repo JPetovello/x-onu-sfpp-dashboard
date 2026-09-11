@@ -41,6 +41,13 @@ NOTIFICATION_CONFIG = deepcopy(
 
 
 class NotificationManager:
+    """Deliver stored alert events to configured external providers.
+
+    Notification delivery runs on a dedicated background worker so external
+    network requests cannot block alert detection or persistence. Events are
+    queued in FIFO order and dispatched independently of telemetry collection.
+    """
+
     def __init__(self, db_path):
         self.db_path = db_path
         self.lock = threading.Lock()
@@ -1052,6 +1059,8 @@ class NotificationManager:
     def _notification_worker(
         self,
     ):
+        """Dispatch queued events to each notification provider."""
+
         while True:
             event = self.notification_queue.get()
 
