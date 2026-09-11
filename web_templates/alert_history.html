@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1">
+
+<title>
+    Alert History - X-ONU-SFPP Dashboard
+</title>
+
+<link
+    rel="stylesheet"
+    href="/static/style.css">
+</head>
+
+<body>
+
+<main class="shell">
+
+<header class="topbar">
+
+    <div>
+        <p class="eyebrow">
+            XGS-PON TELEMETRY
+        </p>
+
+        <h1>
+            Alert History
+        </h1>
+
+        <p class="subtitle">
+            X-ONU-SFPP Dashboard
+        </p>
+    </div>
+
+    <div class="settings-page-nav">
+        <a
+            href="/"
+            class="settings-nav-link">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+</header>
+
+
+<section class="section-block alerts-panel">
+
+    <div class="section-title alerts-title">
+
+        <div>
+            <p class="eyebrow">
+                ALERTS
+            </p>
+
+            <h2>
+                Stored Alert History
+            </h2>
+        </div>
+
+        <span
+            id="historyAlertSummary"
+            class="advanced-status">
+            Checking alerts...
+        </span>
+
+    </div>
+
+
+    <div
+        id="historyAlertsList"
+        class="alerts-list alert-history-list">
+
+        <div class="alerts-empty">
+            Loading alert history...
+        </div>
+
+    </div>
+
+
+    <div class="alert-history-controls">
+
+        <button
+            id="historyPrevious"
+            class="alert-history-button"
+            type="button"
+            disabled>
+            ← Previous
+        </button>
+
+        <span
+            id="historyPageStatus"
+            class="alert-history-page-status">
+            Page 1
+        </span>
+
+        <button
+            id="historyNext"
+            class="alert-history-button"
+            type="button"
+            disabled>
+            Next →
+        </button>
+
+    </div>
+
+</section>
+
+
+<footer>
+
+    <span>
+        X-ONU-SFPP Dashboard · © 2026 Jeff Petovello · Licensed under AGPLv3
+    </span>
+
+    <span>
+        Alert History
+    </span>
+
+</footer>
+
+</main>
+
+<script src="/static/alert_history.js"></script>
+
+</body>
+</html>

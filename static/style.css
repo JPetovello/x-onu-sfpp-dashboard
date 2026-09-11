@@ -1883,3 +1883,80 @@ footer {
 .notification-secret-clear input:disabled {
     cursor: default;
 }
+
+/* Alert History page */
+
+.alert-history-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+}
+
+.alert-history-link-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.alert-history-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.alert-history-page-status {
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.alert-history-button {
+    appearance: none;
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+.alert-history-button:hover:not(:disabled) {
+    opacity: 0.8;
+}
+
+.alert-history-button:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.alert-history-button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+@media
+(max-width: 680px) {
+    .alert-history-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .alert-history-page-status {
+        order: -1;
+    }
+}
+
+/* Recent Alerts now displays only three entries. */
+#alertsList {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+}

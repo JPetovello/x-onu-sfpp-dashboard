@@ -278,6 +278,13 @@ def alerts_settings():
     )
 
 
+@app.route("/alert-history")
+def alert_history():
+    return render_template(
+        "alert_history.html",
+    )
+
+
 @app.route("/api/current")
 def api_current():
 
@@ -519,10 +526,28 @@ def api_alerts():
         type=int,
     )
 
+    offset = request.args.get(
+        "offset",
+        default=0,
+        type=int,
+    )
+
     return jsonify(
         advanced_collector.alert_manager.recent_events(
-            limit
+            limit,
+            offset,
         )
+    )
+
+
+@app.route("/api/alerts/count")
+def api_alert_count():
+
+    return jsonify(
+        {
+            "count":
+                advanced_collector.alert_manager.event_count()
+        }
     )
 
 
