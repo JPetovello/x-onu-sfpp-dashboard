@@ -326,9 +326,15 @@ This means alerts continue to be evaluated and stored in the dashboard database 
 
 Enabling a notification provider does not change the alert thresholds. It simply allows generated alert events to be delivered through the configured provider.
 
-### Recent Alerts
+### Recent Alerts and Alert History
 
-Generated alerts are stored in the dashboard SQLite database and displayed in the **Recent Alerts** section.
+Generated alerts are stored in the dashboard SQLite database.
+
+The main dashboard displays the **3 most recent alerts**, keeping the Recent Alerts section compact while still providing immediate visibility into the latest events.
+
+Select **View Alert History →** to open the dedicated Alert History page. Stored alerts are displayed newest first with **25 alerts per page** and **Previous** / **Next** pagination, allowing older retained events to be reviewed without cluttering the main dashboard.
+
+The amount of alert history available depends on the configured alert-history retention period.
 
 Alert events include information such as:
 
