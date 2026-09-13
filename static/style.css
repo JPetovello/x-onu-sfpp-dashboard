@@ -1563,6 +1563,16 @@ footer {
     text-align: right;
 }
 
+.alert-profile-select {
+    width: 100%;
+    margin: 8px 0;
+}
+
+.alert-threshold-heading {
+    display: block;
+    margin: 16px 0 8px;
+}
+
 
 /* ---------------------------------------------------------
    V3 Alert Settings Validation

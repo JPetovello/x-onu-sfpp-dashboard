@@ -609,6 +609,14 @@ def api_alert_config():
     )
 
 
+@app.route("/api/tx-profiles")
+def api_tx_profiles():
+
+    return jsonify(
+        advanced_collector.alert_manager.get_tx_profiles()
+    )
+
+
 @app.route(
     "/api/notification-config",
     methods=["GET", "PUT"],

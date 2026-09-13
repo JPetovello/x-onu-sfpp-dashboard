@@ -346,60 +346,15 @@ function rxStatus(
 function txStatus(
     value
 ) {
-    value =
-        Number(value);
-
     const thresholds =
         alertConfig &&
         alertConfig.quality &&
         alertConfig.quality.tx_power;
 
-    if (
-        !Number.isFinite(
-            value
-        ) ||
-        !thresholds
-    ) {
-        return [
-            "UNKNOWN",
-            "unknown"
-        ];
-    }
-
-    if (
-        value <= thresholds.poor_low ||
-        value >= thresholds.poor_high
-    ) {
-        return [
-            "POOR",
-            "bad"
-        ];
-    }
-
-    if (
-        value < thresholds.fair_low ||
-        value > thresholds.fair_high
-    ) {
-        return [
-            "FAIR",
-            "warn"
-        ];
-    }
-
-    if (
-        value >= thresholds.great_low &&
-        value <= thresholds.great_high
-    ) {
-        return [
-            "GREAT",
-            "good"
-        ];
-    }
-
-    return [
-        "GOOD",
-        "good"
-    ];
+    return classifyTxPower(
+        value,
+        thresholds
+    );
 }
 
 

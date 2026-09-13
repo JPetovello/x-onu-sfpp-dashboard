@@ -1,5 +1,6 @@
 let currentAlertConfig = null;
 let currentNotificationConfig = null;
+let txProfileCatalog = {};
 
 
 const alertCounterControls = {
@@ -149,8 +150,74 @@ function setAlertValue(
         getAlertElement(id);
 
     if (element) {
-        element.value = value;
+        element.value =
+            value === null || value === undefined
+                ? ""
+                : value;
     }
+}
+
+
+function setTxThresholdValue(
+    id,
+    value
+) {
+    setAlertValue(
+        id,
+        value === null || value === undefined
+            ? ""
+            : Number(value).toFixed(2)
+    );
+}
+
+
+function updateTxProfileHelp(profileId) {
+    const help = getAlertElement(
+        "alertTxProfileHelp"
+    );
+
+    if (!help) {
+        return;
+    }
+
+    const profile =
+        txProfileCatalog[profileId];
+
+    help.textContent = profile
+        ? profile.description
+        : "User-defined TX warning and alarm thresholds.";
+}
+
+
+function renderTxConfig(tx) {
+    setAlertValue(
+        "alertTxProfile",
+        tx.profile
+    );
+
+    setTxThresholdValue(
+        "alertTxLowAlarm",
+        tx.low_alarm
+    );
+
+    setTxThresholdValue(
+        "alertTxLowWarning",
+        tx.low_warning
+    );
+
+    setTxThresholdValue(
+        "alertTxHighWarning",
+        tx.high_warning
+    );
+
+    setTxThresholdValue(
+        "alertTxHighAlarm",
+        tx.high_alarm
+    );
+
+    updateTxProfileHelp(
+        tx.profile
+    );
 }
 
 
@@ -253,25 +320,7 @@ function renderAlertConfig(config) {
         rx.poor_high
     );
 
-    setAlertValue(
-        "alertTxPoorLow",
-        tx.poor_low
-    );
-
-    setAlertValue(
-        "alertTxFairLow",
-        tx.fair_low
-    );
-
-    setAlertValue(
-        "alertTxFairHigh",
-        tx.fair_high
-    );
-
-    setAlertValue(
-        "alertTxPoorHigh",
-        tx.poor_high
-    );
+    renderTxConfig(tx);
 
     setAlertValue(
         "alertThermalWarm",
@@ -402,6 +451,30 @@ function readNumber(
     }
 
     return value;
+}
+
+
+function readOptionalNumber(
+    id,
+    label
+) {
+    const element =
+        getAlertElement(id);
+
+    if (!element) {
+        throw new Error(
+            `${label} control is missing`
+        );
+    }
+
+    if (element.value.trim() === "") {
+        return null;
+    }
+
+    return readNumber(
+        id,
+        label
+    );
 }
 
 
@@ -546,19 +619,19 @@ function markBackendErrorFields(message) {
         || lower.includes("tx_power")
     ) {
         markAlertInvalid(
-            "alertTxPoorLow"
+            "alertTxLowAlarm"
         );
 
         markAlertInvalid(
-            "alertTxFairLow"
+            "alertTxLowWarning"
         );
 
         markAlertInvalid(
-            "alertTxFairHigh"
+            "alertTxHighWarning"
         );
 
         markAlertInvalid(
-            "alertTxPoorHigh"
+            "alertTxHighAlarm"
         );
     }
 
@@ -627,6 +700,94 @@ async function loadAlertConfig() {
 }
 
 
+async function loadTxProfiles() {
+    const response = await fetch(
+        "/api/tx-profiles",
+        {
+            cache: "no-store",
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `HTTP ${response.status}`
+        );
+    }
+
+    const body = await response.json();
+
+    txProfileCatalog = {};
+
+    body.profiles.forEach((profile) => {
+        txProfileCatalog[profile.id] =
+            profile;
+    });
+}
+
+
+async function loadAlertSettings() {
+    try {
+        await loadTxProfiles();
+        await loadAlertConfig();
+    } catch (error) {
+        const status = getAlertElement(
+            "alertConfigStatus"
+        );
+
+        if (status) {
+            status.textContent =
+                "Settings unavailable";
+
+            status.className =
+                "advanced-status bad";
+        }
+    }
+}
+
+
+function applySelectedTxProfile() {
+    const profileId = readSelect(
+        "alertTxProfile",
+        "TX profile"
+    );
+
+    const profile =
+        txProfileCatalog[profileId];
+
+    if (
+        profile &&
+        profile.thresholds
+    ) {
+        if (currentAlertConfig) {
+            currentAlertConfig.quality.tx_power =
+                structuredClone(
+                    profile.thresholds
+                );
+        }
+
+        renderTxConfig(
+            profile.thresholds
+        );
+    } else {
+        updateTxProfileHelp(
+            profileId
+        );
+    }
+}
+
+
+function markTxProfileCustom() {
+    setAlertValue(
+        "alertTxProfile",
+        "custom"
+    );
+
+    updateTxProfileHelp(
+        "custom"
+    );
+}
+
+
 async function saveAlertConfig() {
     const status =
         getAlertElement(
@@ -679,29 +840,53 @@ async function saveAlertConfig() {
                 "RX poor high"
             );
 
-        config.quality.tx_power.poor_low =
-            readNumber(
-                "alertTxPoorLow",
-                "TX poor low"
+        const txProfile =
+            readSelect(
+                "alertTxProfile",
+                "TX profile"
             );
 
-        config.quality.tx_power.fair_low =
-            readNumber(
-                "alertTxFairLow",
-                "TX fair low"
-            );
+        const selectedProfile =
+            txProfileCatalog[txProfile];
 
-        config.quality.tx_power.fair_high =
-            readNumber(
-                "alertTxFairHigh",
-                "TX fair high"
-            );
+        if (
+            selectedProfile &&
+            selectedProfile.thresholds
+        ) {
+            config.quality.tx_power =
+                structuredClone(
+                    selectedProfile.thresholds
+                );
+        } else {
+            const tx =
+                config.quality.tx_power;
 
-        config.quality.tx_power.poor_high =
-            readNumber(
-                "alertTxPoorHigh",
-                "TX poor high"
-            );
+            tx.profile = "custom";
+
+            tx.low_alarm =
+                readNumber(
+                    "alertTxLowAlarm",
+                    "TX low alarm"
+                );
+
+            tx.low_warning =
+                readNumber(
+                    "alertTxLowWarning",
+                    "TX low warning"
+                );
+
+            tx.high_warning =
+                readOptionalNumber(
+                    "alertTxHighWarning",
+                    "TX high warning"
+                );
+
+            tx.high_alarm =
+                readOptionalNumber(
+                    "alertTxHighAlarm",
+                    "TX high alarm"
+                );
+        }
 
         config.quality.thermal.warm =
             readNumber(
@@ -1562,8 +1747,38 @@ if (
         "alertSaveSettings"
     )
 ) {
-    loadAlertConfig();
+    loadAlertSettings();
 }
+
+
+const alertTxProfile =
+    getAlertElement(
+        "alertTxProfile"
+    );
+
+if (alertTxProfile) {
+    alertTxProfile.addEventListener(
+        "change",
+        applySelectedTxProfile
+    );
+}
+
+
+[
+    "alertTxLowAlarm",
+    "alertTxLowWarning",
+    "alertTxHighWarning",
+    "alertTxHighAlarm",
+].forEach((id) => {
+    const element = getAlertElement(id);
+
+    if (element) {
+        element.addEventListener(
+            "input",
+            markTxProfileCustom
+        );
+    }
+});
 
 
 if (

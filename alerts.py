@@ -6,6 +6,55 @@ from copy import deepcopy
 from datetime import datetime
 
 from notifications import NotificationManager
+from tx_health import classify_tx_power
+
+
+CONFIG_VERSION = 2
+
+TX_PROFILE_LEGACY = "legacy"
+TX_PROFILE_XGSPONST2001_A01 = (
+    "xgsponst2001-a01"
+)
+TX_PROFILE_CUSTOM = "custom"
+
+TX_PROFILES = {
+    TX_PROFILE_LEGACY: {
+        "id": TX_PROFILE_LEGACY,
+        "label": "Legacy",
+        "description": (
+            "Preserves the original dashboard "
+            "TX grading and alert behavior."
+        ),
+        "thresholds": {
+            "profile": TX_PROFILE_LEGACY,
+            "low_alarm": 1,
+            "low_warning": 2,
+            "high_warning": 7,
+            "high_alarm": 8,
+            "cosmetic_great_low": 4,
+            "cosmetic_great_high": 5,
+        },
+    },
+    TX_PROFILE_XGSPONST2001_A01: {
+        "id": TX_PROFILE_XGSPONST2001_A01,
+        "label": "XGSPONST2001 A-01",
+        "description": (
+            "Uses the programmed low-side DDMI "
+            "thresholds. The 0xFFFF upper values "
+            "are disabled because they are not "
+            "meaningful calibrated thresholds."
+        ),
+        "thresholds": {
+            "profile": TX_PROFILE_XGSPONST2001_A01,
+            "low_alarm": 2.0,
+            "low_warning": 3.0,
+            "high_warning": None,
+            "high_alarm": None,
+            "cosmetic_great_low": None,
+            "cosmetic_great_high": None,
+        },
+    },
+}
 
 
 PLOAM_STATES = {
@@ -19,6 +68,7 @@ PLOAM_STATES = {
 
 
 DEFAULT_ALERT_CONFIG = {
+    "config_version": CONFIG_VERSION,
     "quality": {
         "warning_samples": 3,
         "warning_severity": "warning",
@@ -31,14 +81,11 @@ DEFAULT_ALERT_CONFIG = {
             "great_low": -20,
             "great_high": -14,
         },
-        "tx_power": {
-            "poor_low": 1,
-            "poor_high": 8,
-            "fair_low": 2,
-            "fair_high": 7,
-            "great_low": 4,
-            "great_high": 5,
-        },
+        "tx_power": deepcopy(
+            TX_PROFILES[
+                TX_PROFILE_LEGACY
+            ]["thresholds"]
+        ),
         "thermal": {
             "warm": 75,
             "hot": 85,
@@ -149,7 +196,7 @@ class AlertManager:
 
     def __init__(self, db_path):
         self.db_path = db_path
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         self.previous = {}
         self.pending = {}
@@ -359,6 +406,16 @@ class AlertManager:
                     f"{path} must be finite"
                 )
 
+        def require_optional_number(
+            value,
+            path,
+        ):
+            if value is not None:
+                require_number(
+                    value,
+                    path,
+                )
+
         config = require_dict(
             config,
             "config",
@@ -369,6 +426,17 @@ class AlertManager:
             DEFAULT_ALERT_CONFIG.keys(),
             "config",
         )
+
+        require_int(
+            config["config_version"],
+            "config.config_version",
+        )
+
+        if config["config_version"] != CONFIG_VERSION:
+            raise ValueError(
+                "config.config_version must be "
+                f"{CONFIG_VERSION}"
+            )
 
         quality = require_dict(
             config["quality"],
@@ -456,38 +524,106 @@ class AlertManager:
             "quality.tx_power",
         )
 
+        profile = tx["profile"]
+
+        if profile not in {
+            TX_PROFILE_LEGACY,
+            TX_PROFILE_XGSPONST2001_A01,
+            TX_PROFILE_CUSTOM,
+        }:
+            raise ValueError(
+                "quality.tx_power.profile must be "
+                "one of: legacy, "
+                "xgsponst2001-a01, custom"
+            )
+
         for key in (
-            "poor_low",
-            "poor_high",
-            "fair_low",
-            "fair_high",
-            "great_low",
-            "great_high",
+            "low_alarm",
+            "low_warning",
         ):
             require_number(
                 tx[key],
                 f"quality.tx_power.{key}",
             )
 
-        if not (
-            tx["poor_low"]
-            <
-            tx["fair_low"]
-            <=
-            tx["great_low"]
-            <=
-            tx["great_high"]
-            <=
-            tx["fair_high"]
-            <
-            tx["poor_high"]
+        for key in (
+            "high_warning",
+            "high_alarm",
+            "cosmetic_great_low",
+            "cosmetic_great_high",
         ):
+            require_optional_number(
+                tx[key],
+                f"quality.tx_power.{key}",
+            )
+
+        if tx["low_alarm"] >= tx["low_warning"]:
             raise ValueError(
                 "TX thresholds must satisfy "
-                "poor_low < fair_low <= "
-                "great_low <= great_high <= "
-                "fair_high < poor_high"
+                "low_alarm < low_warning"
             )
+
+        high_warning = tx["high_warning"]
+        high_alarm = tx["high_alarm"]
+
+        if (
+            high_warning is not None
+            and high_warning <= tx["low_warning"]
+        ):
+            raise ValueError(
+                "TX high_warning must be greater "
+                "than low_warning"
+            )
+
+        if (
+            high_alarm is not None
+            and high_alarm <= tx["low_warning"]
+        ):
+            raise ValueError(
+                "TX high_alarm must be greater "
+                "than low_warning"
+            )
+
+        if (
+            high_warning is not None
+            and high_alarm is not None
+            and high_warning >= high_alarm
+        ):
+            raise ValueError(
+                "TX high thresholds must satisfy "
+                "high_warning < high_alarm"
+            )
+
+        great_low = tx["cosmetic_great_low"]
+        great_high = tx["cosmetic_great_high"]
+
+        if (great_low is None) != (great_high is None):
+            raise ValueError(
+                "TX cosmetic GREAT thresholds must "
+                "both be set or both be disabled"
+            )
+
+        if (
+            great_low is not None
+            and great_low > great_high
+        ):
+            raise ValueError(
+                "TX cosmetic GREAT thresholds must "
+                "satisfy cosmetic_great_low <= "
+                "cosmetic_great_high"
+            )
+
+        if profile in TX_PROFILES:
+            expected = TX_PROFILES[
+                profile
+            ]["thresholds"]
+
+            if tx != expected:
+                raise ValueError(
+                    "Named TX profiles must use "
+                    "their defined thresholds; use "
+                    "the custom profile for edits"
+                )
 
         thermal = require_dict(
             quality["thermal"],
@@ -767,6 +903,88 @@ class AlertManager:
         )
 
 
+    def _normalize_config_shape(
+        self,
+        config,
+    ):
+        """Upgrade legacy config in memory without changing its policy."""
+
+        config = deepcopy(
+            config
+        )
+
+        if not isinstance(config, dict):
+            return config
+
+        quality = config.get(
+            "quality"
+        )
+
+        if not isinstance(quality, dict):
+            return config
+
+        tx = quality.get(
+            "tx_power"
+        )
+
+        if (
+            "config_version" not in config
+            and isinstance(tx, dict)
+        ):
+            old_keys = {
+                "poor_low",
+                "poor_high",
+                "fair_low",
+                "fair_high",
+                "great_low",
+                "great_high",
+            }
+
+            if set(tx.keys()) == old_keys:
+                old_default = {
+                    "poor_low": 1,
+                    "poor_high": 8,
+                    "fair_low": 2,
+                    "fair_high": 7,
+                    "great_low": 4,
+                    "great_high": 5,
+                }
+
+                profile = (
+                    TX_PROFILE_LEGACY
+                    if tx == old_default
+                    else TX_PROFILE_CUSTOM
+                )
+
+                quality["tx_power"] = {
+                    "profile": profile,
+                    "low_alarm": tx["poor_low"],
+                    "low_warning": tx["fair_low"],
+                    "high_warning": tx["fair_high"],
+                    "high_alarm": tx["poor_high"],
+                    "cosmetic_great_low": tx["great_low"],
+                    "cosmetic_great_high": tx["great_high"],
+                }
+
+                config["config_version"] = (
+                    CONFIG_VERSION
+                )
+
+        reachability = quality and config.get(
+            "core_reachability"
+        )
+
+        if isinstance(reachability, dict):
+            reachability.setdefault(
+                "failure_samples",
+                DEFAULT_ALERT_CONFIG[
+                    "core_reachability"
+                ]["failure_samples"],
+            )
+
+        return config
+
+
     def _write_config_row(
         self,
         con,
@@ -819,26 +1037,9 @@ class AlertManager:
                         row["config_json"]
                     )
 
-                    if isinstance(
-                        config,
-                        dict,
-                    ):
-                        reachability = (
-                            config.get(
-                                "core_reachability"
-                            )
-                        )
-
-                        if isinstance(
-                            reachability,
-                            dict,
-                        ):
-                            reachability.setdefault(
-                                "failure_samples",
-                                DEFAULT_ALERT_CONFIG[
-                                    "core_reachability"
-                                ]["failure_samples"],
-                            )
+                    config = self._normalize_config_shape(
+                        config
+                    )
 
                     config = (
                         self.validate_config(
@@ -878,10 +1079,40 @@ class AlertManager:
             )
 
 
+    def get_tx_profiles(
+        self,
+    ):
+        profiles = [
+            deepcopy(profile)
+            for profile in TX_PROFILES.values()
+        ]
+
+        profiles.append(
+            {
+                "id": TX_PROFILE_CUSTOM,
+                "label": "Custom",
+                "description": (
+                    "User-defined TX warning and "
+                    "alarm thresholds."
+                ),
+                "thresholds": None,
+            }
+        )
+
+        return {
+            "config_version": CONFIG_VERSION,
+            "profiles": profiles,
+        }
+
+
     def save_config(
         self,
         config,
     ):
+        config = self._normalize_config_shape(
+            config
+        )
+
         config_copy = (
             self.validate_config(
                 config
@@ -897,11 +1128,59 @@ class AlertManager:
         global ALERT_CONFIG
 
         with self.lock:
+            previous_tx = deepcopy(
+                ALERT_CONFIG["quality"][
+                    "tx_power"
+                ]
+            )
+
             ALERT_CONFIG = deepcopy(
                 config_copy
             )
 
+            if (
+                previous_tx
+                != config_copy["quality"][
+                    "tx_power"
+                ]
+            ):
+                self._reset_tx_runtime_state_locked()
+
         return self.get_config()
+
+
+    def _reset_tx_runtime_state_locked(
+        self,
+    ):
+        state_key = (
+            "core_quality",
+            "tx_power_dBm",
+        )
+
+        active_key = (
+            "quality_active",
+            state_key,
+        )
+
+        pending_key = (
+            "quality_pending",
+            state_key,
+        )
+
+        self.previous.pop(
+            state_key,
+            None,
+        )
+
+        self.previous.pop(
+            active_key,
+            None,
+        )
+
+        self.pending.pop(
+            pending_key,
+            None,
+        )
 
 
     def _timestamp_seconds(
@@ -1434,64 +1713,9 @@ class AlertManager:
             ]
         )
 
-        try:
-            value = float(
-                value
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            return (
-                "UNKNOWN",
-                "unknown",
-                None,
-            )
-
-        if not math.isfinite(value):
-            return (
-                "UNKNOWN",
-                "unknown",
-                None,
-            )
-
-        if (
-            value <= thresholds["poor_low"]
-            or
-            value >= thresholds["poor_high"]
-        ):
-            return (
-                "POOR",
-                "bad",
-                value,
-            )
-
-        if (
-            value < thresholds["fair_low"]
-            or
-            value > thresholds["fair_high"]
-        ):
-            return (
-                "FAIR",
-                "warn",
-                value,
-            )
-
-        if (
-            value >= thresholds["great_low"]
-            and
-            value <= thresholds["great_high"]
-        ):
-            return (
-                "GREAT",
-                "good",
-                value,
-            )
-
-        return (
-            "GOOD",
-            "good",
+        return classify_tx_power(
             value,
+            thresholds,
         )
 
 
@@ -2176,30 +2400,33 @@ class AlertManager:
         ts,
         metrics,
     ):
-        (
-            status_text,
-            level,
-            value,
-        ) = self._tx_status(
-            metrics.get(
-                "tx_power_dBm"
+        # Keep classification and transition processing atomic with a TX
+        # policy change so a sample cannot straddle the old and new policy.
+        with self.lock:
+            (
+                status_text,
+                level,
+                value,
+            ) = self._tx_status(
+                metrics.get(
+                    "tx_power_dBm"
+                )
             )
-        )
 
-        self._process_quality_state(
-            ts=ts,
-            state_key=(
-                "core_quality",
-                "tx_power_dBm",
-            ),
-            alert_prefix="tx_power",
-            metric_name="tx_power_dBm",
-            label="TX power",
-            status_text=status_text,
-            level=level,
-            value=value,
-            unit=" dBm",
-        )
+            self._process_quality_state(
+                ts=ts,
+                state_key=(
+                    "core_quality",
+                    "tx_power_dBm",
+                ),
+                alert_prefix="tx_power",
+                metric_name="tx_power_dBm",
+                label="TX power",
+                status_text=status_text,
+                level=level,
+                value=value,
+                unit=" dBm",
+            )
 
 
     def _process_thermal_state(

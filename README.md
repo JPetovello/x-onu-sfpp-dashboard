@@ -119,24 +119,45 @@ Warning-level RX conditions are subject to **Warning debounce**. Poor conditions
 
 #### TX Power Thresholds
 
-The TX power settings define the transmit optical-power ranges used by the alert system.
+TX power uses a profile-aware operational health model. The selected profile and its persisted thresholds drive both the dashboard TX badge and server-side TX alerts.
 
-Defaults:
+Operational states are:
 
-    Poor low:   1 dBm
-    Fair low:   2 dBm
-    Great low:  4 dBm
-    Great high: 5 dBm
-    Fair high:  7 dBm
-    Poor high:  8 dBm
+- **NORMAL**: inside the configured warning and alarm boundaries.
+- **WARNING**: beyond a warning boundary but not an alarm boundary. Warning alerts use the configured consecutive-sample debounce.
+- **ALARM**: at or beyond an alarm boundary. Alarm conditions can alert immediately.
+- **UNKNOWN**: the reading is missing, invalid, or nonfinite.
 
-**Poor low** and **Poor high** define the outer transmit-power limits.
+The following profiles are available:
 
-**Fair low** and **Fair high** define the warning ranges approaching those limits.
+**Legacy** preserves the original dashboard behavior exactly. It is the default for fresh installations and for an existing saved configuration that still matches the original defaults:
 
-The internal **Great** range is used for signal-quality classification.
+    Low alarm:     1 dBm
+    Low warning:   2 dBm
+    High warning:  7 dBm
+    High alarm:    8 dBm
+    Cosmetic Great range: 4-5 dBm
 
-Warning-level TX conditions are subject to **Warning debounce**. Poor conditions can alert immediately. When an active TX warning or critical condition returns to the normal range, a recovery event is generated.
+Legacy retains the historical GOOD / FAIR / POOR display wording. GREAT is only a cosmetic subdivision of the healthy state: it does not change alert severity or overall operational health.
+
+**XGSPONST2001 A-01** reflects the DDMI thresholds read from that module revision:
+
+    Low alarm:     2.00 dBm
+    Low warning:   3.00 dBm
+    High warning:  Disabled
+    High alarm:    Disabled
+
+Its behavior is:
+
+    TX <= 2.00 dBm        ALARM
+    2.00 < TX < 3.00 dBm WARNING
+    TX >= 3.00 dBm        NORMAL
+
+The module stores `0xFFFF` for both upper TX thresholds. This is the maximum SFF-8472 TX-power encoding, approximately `8.16 dBm`, and is not treated as a meaningful calibrated high-side threshold. No replacement high alarm is invented. Consequently, recurring readings such as `7.1-7.3 dBm` remain NORMAL with this profile.
+
+**Custom** allows user-defined low thresholds and optional upper warning and alarm thresholds. Leaving an upper field blank disables that boundary; disabled thresholds are stored as JSON `null`, not a magic numeric value. Manually editing a TX threshold changes the selected profile to Custom.
+
+Existing saved configurations are preserved. A source-code default change does not silently migrate them, and the XGSPONST2001 A-01 profile is applied only when selected explicitly. Changing the TX profile or thresholds clears only the in-memory TX debounce and active-classification baseline so the policy change itself cannot create a bogus warning or recovery event. Historical telemetry and alert events are not rewritten.
 
 #### Thermal Thresholds
 
@@ -764,9 +785,11 @@ The operational state can be configured from **Alert Settings**.
 
 The dashboard displays optical quality classifications for RX and TX signal levels.
 
-Overall PON health is evaluated separately from the cosmetic signal-quality label so that a valid operating level does not automatically create a warning merely because it falls outside a preferred signal-quality band.
+The dashboard and server-side alert engine use the same persisted threshold policy. Warning and alarm classifications therefore affect overall PON health as well as alert generation. The browser loads that policy from the backend rather than carrying separate hard-coded TX thresholds.
 
-Alert thresholds are configurable independently through **Alert Settings**.
+The Legacy TX profile may display GREAT within part of its healthy range. GREAT is cosmetic only and maps to the same healthy operational level as GOOD or NORMAL.
+
+Alert thresholds and the active TX profile are configurable through **Alert Settings**.
 
 ## Unraid
 

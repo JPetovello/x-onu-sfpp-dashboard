@@ -1,0 +1,85 @@
+{
+  "profiles": {
+    "legacy": {
+      "profile": "legacy",
+      "low_alarm": 1,
+      "low_warning": 2,
+      "high_warning": 7,
+      "high_alarm": 8,
+      "cosmetic_great_low": 4,
+      "cosmetic_great_high": 5
+    },
+    "xgsponst2001-a01": {
+      "profile": "xgsponst2001-a01",
+      "low_alarm": 2.0,
+      "low_warning": 3.0,
+      "high_warning": null,
+      "high_alarm": null,
+      "cosmetic_great_low": null,
+      "cosmetic_great_high": null
+    },
+    "custom-low-only": {
+      "profile": "custom",
+      "low_alarm": 2.0,
+      "low_warning": 3.0,
+      "high_warning": null,
+      "high_alarm": null,
+      "cosmetic_great_low": null,
+      "cosmetic_great_high": null
+    },
+    "custom-high-warning": {
+      "profile": "custom",
+      "low_alarm": 2.0,
+      "low_warning": 3.0,
+      "high_warning": 7.0,
+      "high_alarm": null,
+      "cosmetic_great_low": null,
+      "cosmetic_great_high": null
+    },
+    "custom-high-alarm": {
+      "profile": "custom",
+      "low_alarm": 2.0,
+      "low_warning": 3.0,
+      "high_warning": null,
+      "high_alarm": 8.0,
+      "cosmetic_great_low": null,
+      "cosmetic_great_high": null
+    },
+    "custom-both-high": {
+      "profile": "custom",
+      "low_alarm": 2.0,
+      "low_warning": 3.0,
+      "high_warning": 7.0,
+      "high_alarm": 8.0,
+      "cosmetic_great_low": null,
+      "cosmetic_great_high": null
+    }
+  },
+  "cases": [
+    {"profile": "legacy", "value": 1.0, "label": "POOR", "level": "bad"},
+    {"profile": "legacy", "value": 1.5, "label": "FAIR", "level": "warn"},
+    {"profile": "legacy", "value": 2.0, "label": "GOOD", "level": "good"},
+    {"profile": "legacy", "value": 4.0, "label": "GREAT", "level": "good"},
+    {"profile": "legacy", "value": 5.0, "label": "GREAT", "level": "good"},
+    {"profile": "legacy", "value": 7.0, "label": "GOOD", "level": "good"},
+    {"profile": "legacy", "value": 7.1, "label": "FAIR", "level": "warn"},
+    {"profile": "legacy", "value": 8.0, "label": "POOR", "level": "bad"},
+    {"profile": "xgsponst2001-a01", "value": 1.99, "label": "ALARM", "level": "bad"},
+    {"profile": "xgsponst2001-a01", "value": 2.0, "label": "ALARM", "level": "bad"},
+    {"profile": "xgsponst2001-a01", "value": 2.01, "label": "WARNING", "level": "warn"},
+    {"profile": "xgsponst2001-a01", "value": 2.99, "label": "WARNING", "level": "warn"},
+    {"profile": "xgsponst2001-a01", "value": 3.0, "label": "NORMAL", "level": "good"},
+    {"profile": "xgsponst2001-a01", "value": 6.22, "label": "NORMAL", "level": "good"},
+    {"profile": "xgsponst2001-a01", "value": 7.0, "label": "NORMAL", "level": "good"},
+    {"profile": "xgsponst2001-a01", "value": 7.1, "label": "NORMAL", "level": "good"},
+    {"profile": "xgsponst2001-a01", "value": 7.3, "label": "NORMAL", "level": "good"},
+    {"profile": "xgsponst2001-a01", "value": 8.0, "label": "NORMAL", "level": "good"},
+    {"profile": "custom-low-only", "value": 20.0, "label": "NORMAL", "level": "good"},
+    {"profile": "custom-high-warning", "value": 7.0, "label": "NORMAL", "level": "good"},
+    {"profile": "custom-high-warning", "value": 7.1, "label": "WARNING", "level": "warn"},
+    {"profile": "custom-high-alarm", "value": 7.9, "label": "NORMAL", "level": "good"},
+    {"profile": "custom-high-alarm", "value": 8.0, "label": "ALARM", "level": "bad"},
+    {"profile": "custom-both-high", "value": 7.1, "label": "WARNING", "level": "warn"},
+    {"profile": "custom-both-high", "value": 8.0, "label": "ALARM", "level": "bad"}
+  ]
+}

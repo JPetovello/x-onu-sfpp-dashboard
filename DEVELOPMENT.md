@@ -121,6 +121,48 @@ When modifying counter handling, preserve the concepts of:
 - configured minimum deltas
 - cooldown periods
 
+#### TX health profiles
+
+TX optical health uses configuration schema version `2`. The persisted `quality.tx_power` object has this shape:
+
+```json
+{
+  "profile": "legacy",
+  "low_alarm": 1,
+  "low_warning": 2,
+  "high_warning": 7,
+  "high_alarm": 8,
+  "cosmetic_great_low": 4,
+  "cosmetic_great_high": 5
+}
+```
+
+`high_warning` and `high_alarm` are independently optional. JSON `null` means the boundary is disabled. Do not replace a disabled boundary with `Infinity`, `999`, the SFF-8472 maximum, or another sentinel.
+
+Supported profile identifiers are:
+
+- `legacy`: exact original dashboard grading and alert boundaries.
+- `xgsponst2001-a01`: low alarm `2.00 dBm`, low warning `3.00 dBm`, and no high-side warning or alarm.
+- `custom`: user-edited threshold values.
+
+The XGSPONST2001 A-01 module stores `0xFFFF` for both high TX threshold words. That value decodes to approximately `8.16 dBm` because it is the maximum representable SFF-8472 TX-power value. It is treated as an absent threshold, not as a calibrated alarm.
+
+Operational classification is NORMAL, WARNING, ALARM, or UNKNOWN. The Legacy profile retains GOOD, FAIR, POOR, and cosmetic GREAT display labels for compatibility, but their operational levels are still good, warn, and bad. GREAT must never override a real warning or alarm and must never trigger an alert.
+
+The authoritative Python classifier is the pure `classify_tx_power()` function in `tx_health.py`. The browser counterpart is in `static/tx_health.js`. Both consume the persisted configuration, and both must pass `tests/tx_classification_cases.json`. Never reintroduce separate hard-coded thresholds in `static/dashboard.js`.
+
+Profile and threshold changes reset only these in-memory TX keys:
+
+- the previous TX classification
+- the active TX warning/alarm level
+- the pending TX warning debounce counter
+
+RX, thermal, reachability, active-alarm, GEM, and counter state must not be reset. Re-baselining prevents the policy change itself from generating a false transition. Historical telemetry and alert events are never reclassified or rewritten.
+
+TX classification and state-transition processing are held under the same re-entrant manager lock used when activating and re-baselining a changed TX policy. Preserve this atomic boundary; otherwise a collector sample could be classified under one policy and processed after another policy becomes active.
+
+Unversioned saved configurations are normalized in memory. Exact original defaults become `legacy`; user-edited values become `custom`. The stored row is not rewritten merely because the application loaded it. An explicit settings save persists schema version `2`. Do not infer migration consent from values that happen to match a default.
+
 ### `notifications.py`
 
 Implements external notification delivery.
@@ -238,6 +280,7 @@ The application exposes APIs for areas including:
 - advanced telemetry history
 - alert events and alert counts
 - alert configuration
+- available TX health profiles
 - notification configuration
 - retention configuration
 
@@ -264,6 +307,7 @@ static/
 Important JavaScript files include:
 
 - `dashboard.js` — main dashboard telemetry and UI behavior
+- `tx_health.js` — pure browser-side TX classification
 - `alerts.js` — alert and notification settings interface behavior
 - `alert_history.js` — paginated alert-history interface
 - `theme.js` — theme selection and persistence
@@ -370,6 +414,23 @@ git diff
 ```
 
 For Python changes, also verify that modified modules compile successfully before building the container.
+
+Run the automated TX profile, classification-parity, migration, and alert-state tests with:
+
+```bash
+python3 -m unittest discover -s tests -v
+node tests/test_tx_health.js
+node tests/test_alert_settings.js
+```
+
+Check Python and JavaScript syntax with:
+
+```bash
+python3 -m compileall -q .
+node --check static/tx_health.js
+node --check static/dashboard.js
+node --check static/alerts.js
+```
 
 For changes involving collectors, alerts, retention, or notifications, test both normal operation and failure behavior. A failure in an optional subsystem should not unexpectedly stop unrelated monitoring.
 

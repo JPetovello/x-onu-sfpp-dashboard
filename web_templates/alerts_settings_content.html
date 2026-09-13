@@ -106,57 +106,88 @@
 
 
         <div class="alert-setting-card">
-            <span class="alert-setting-label">
+            <label
+                for="alertTxProfile"
+                class="alert-setting-label">
+                TX power profile
+            </label>
+
+            <select
+                id="alertTxProfile"
+                class="alert-setting-input alert-setting-select alert-profile-select">
+                <option value="legacy">
+                    Legacy
+                </option>
+                <option value="xgsponst2001-a01">
+                    XGSPONST2001 A-01
+                </option>
+                <option value="custom">
+                    Custom
+                </option>
+            </select>
+
+            <span
+                id="alertTxProfileHelp"
+                class="alert-setting-help">
+                Select a TX threshold profile.
+            </span>
+
+            <span class="alert-setting-label alert-threshold-heading">
                 TX power thresholds
             </span>
 
             <div class="alert-threshold-list">
 
                 <label class="alert-threshold-row">
-                    <span>Poor low</span>
+                    <span>Low alarm</span>
 
                     <input
-                        id="alertTxPoorLow"
+                        id="alertTxLowAlarm"
                         class="alert-setting-input"
                         type="number"
-                        step="0.1">
+                        step="0.01">
                 </label>
 
                 <label class="alert-threshold-row">
-                    <span>Fair low</span>
+                    <span>Low warning</span>
 
                     <input
-                        id="alertTxFairLow"
+                        id="alertTxLowWarning"
                         class="alert-setting-input"
                         type="number"
-                        step="0.1">
+                        step="0.01">
                 </label>
 
                 <label class="alert-threshold-row">
-                    <span>Fair high</span>
+                    <span>High warning</span>
 
                     <input
-                        id="alertTxFairHigh"
+                        id="alertTxHighWarning"
                         class="alert-setting-input"
                         type="number"
-                        step="0.1">
+                        step="0.01"
+                        placeholder="Disabled">
                 </label>
 
                 <label class="alert-threshold-row">
-                    <span>Poor high</span>
+                    <span>High alarm</span>
 
                     <input
-                        id="alertTxPoorHigh"
+                        id="alertTxHighAlarm"
                         class="alert-setting-input"
                         type="number"
-                        step="0.1">
+                        step="0.01"
+                        placeholder="Disabled">
                 </label>
 
             </div>
 
             <span class="alert-setting-help">
-                Optical transmit-power thresholds
-                in dBm.
+                Blank upper fields are disabled. The
+                XGSPONST2001 A-01 profile disables them
+                because its programmed 0xFFFF values are
+                the DDMI encoding maximum, not meaningful
+                calibrated high-side limits.
             </span>
         </div>
 
