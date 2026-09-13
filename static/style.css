@@ -1568,6 +1568,28 @@ footer {
     margin: 8px 0;
 }
 
+.alert-operating-envelope {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid var(--good);
+    border-radius: 9px;
+    background: rgba(61, 213, 152, 0.08);
+}
+
+.alert-operating-envelope[hidden],
+#alertTxThresholdControls[hidden] {
+    display: none;
+}
+
+.alert-operating-range-values {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 8px;
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
 .alert-threshold-heading {
     display: block;
     margin: 16px 0 8px;

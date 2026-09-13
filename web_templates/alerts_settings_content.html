@@ -132,11 +132,45 @@
                 Select a TX threshold profile.
             </span>
 
-            <span class="alert-setting-label alert-threshold-heading">
-                TX power thresholds
-            </span>
+            <div
+                id="alertTxOperatingEnvelope"
+                class="alert-operating-envelope"
+                hidden>
 
-            <div class="alert-threshold-list">
+                <span class="alert-setting-label">
+                    XGS-PON TX operating range
+                </span>
+
+                <div class="alert-operating-range-values">
+                    <span>
+                        Minimum:
+                        <strong id="alertTxOperatingMinimum">
+                            --
+                        </strong>
+                    </span>
+
+                    <span>
+                        Maximum:
+                        <strong id="alertTxOperatingMaximum">
+                            --
+                        </strong>
+                    </span>
+                </div>
+
+                <span class="alert-setting-help">
+                    This protection is active. Values outside
+                    this range trigger an immediate TX power
+                    alarm.
+                </span>
+            </div>
+
+            <div id="alertTxThresholdControls">
+
+                <span class="alert-setting-label alert-threshold-heading">
+                    TX power thresholds
+                </span>
+
+                <div class="alert-threshold-list">
 
                 <label class="alert-threshold-row">
                     <span>Low alarm</span>
@@ -145,7 +179,8 @@
                         id="alertTxLowAlarm"
                         class="alert-setting-input"
                         type="number"
-                        step="0.01">
+                        step="0.01"
+                        placeholder="Not used">
                 </label>
 
                 <label class="alert-threshold-row">
@@ -155,7 +190,8 @@
                         id="alertTxLowWarning"
                         class="alert-setting-input"
                         type="number"
-                        step="0.01">
+                        step="0.01"
+                        placeholder="Not used">
                 </label>
 
                 <label class="alert-threshold-row">
@@ -180,15 +216,14 @@
                         placeholder="Disabled">
                 </label>
 
-            </div>
+                </div>
 
-            <span class="alert-setting-help">
-                Blank upper fields are disabled. The
-                XGSPONST2001 A-01 profile disables them
-                because its programmed 0xFFFF values are
-                the DDMI encoding maximum, not meaningful
-                calibrated high-side limits.
-            </span>
+                <span class="alert-setting-help">
+                    Custom profiles support independent warning
+                    and alarm thresholds. Blank upper fields are
+                    disabled.
+                </span>
+            </div>
         </div>
 
 

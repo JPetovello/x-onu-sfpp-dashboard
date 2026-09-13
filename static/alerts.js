@@ -1,6 +1,7 @@
 let currentAlertConfig = null;
 let currentNotificationConfig = null;
 let txProfileCatalog = {};
+let currentCustomTxConfig = null;
 
 
 const alertCounterControls = {
@@ -189,6 +190,131 @@ function updateTxProfileHelp(profileId) {
 }
 
 
+function updateTxProfilePresentation(tx) {
+    const envelope = getAlertElement(
+        "alertTxOperatingEnvelope"
+    );
+
+    const thresholdControls = getAlertElement(
+        "alertTxThresholdControls"
+    );
+
+    const hasOperatingEnvelope =
+        tx.operating_min !== null &&
+        tx.operating_min !== undefined &&
+        tx.operating_max !== null &&
+        tx.operating_max !== undefined;
+
+    if (envelope) {
+        envelope.hidden = !hasOperatingEnvelope;
+    }
+
+    if (thresholdControls) {
+        thresholdControls.hidden =
+            hasOperatingEnvelope;
+    }
+
+    if (hasOperatingEnvelope) {
+        const minimum = getAlertElement(
+            "alertTxOperatingMinimum"
+        );
+
+        const maximum = getAlertElement(
+            "alertTxOperatingMaximum"
+        );
+
+        if (minimum) {
+            minimum.textContent =
+                `${Number(tx.operating_min).toFixed(2)} dBm`;
+        }
+
+        if (maximum) {
+            maximum.textContent =
+                `${Number(tx.operating_max).toFixed(2)} dBm`;
+        }
+    }
+}
+
+
+function buildCustomTxConfig(tx) {
+    let source = tx;
+
+    if (
+        !source ||
+        source.low_alarm === null ||
+        source.low_alarm === undefined ||
+        source.low_warning === null ||
+        source.low_warning === undefined
+    ) {
+        source =
+            txProfileCatalog.legacy?.thresholds;
+    }
+
+    if (!source) {
+        return null;
+    }
+
+    const custom = structuredClone(source);
+
+    custom.profile = "custom";
+    custom.operating_min = null;
+    custom.operating_max = null;
+
+    return custom;
+}
+
+
+function readTxDraftValue(id) {
+    const element = getAlertElement(id);
+
+    if (!element || element.value === "") {
+        return null;
+    }
+
+    const value = Number(element.value);
+
+    return Number.isFinite(value)
+        ? value
+        : null;
+}
+
+
+function captureCustomTxConfig() {
+    if (!currentAlertConfig) {
+        return null;
+    }
+
+    const custom = buildCustomTxConfig(
+        currentAlertConfig.quality.tx_power
+    );
+
+    if (!custom) {
+        return null;
+    }
+
+    custom.low_alarm = readTxDraftValue(
+        "alertTxLowAlarm"
+    );
+
+    custom.low_warning = readTxDraftValue(
+        "alertTxLowWarning"
+    );
+
+    custom.high_warning = readTxDraftValue(
+        "alertTxHighWarning"
+    );
+
+    custom.high_alarm = readTxDraftValue(
+        "alertTxHighAlarm"
+    );
+
+    currentCustomTxConfig = structuredClone(custom);
+    currentAlertConfig.quality.tx_power = custom;
+
+    return custom;
+}
+
+
 function renderTxConfig(tx) {
     setAlertValue(
         "alertTxProfile",
@@ -218,6 +344,8 @@ function renderTxConfig(tx) {
     updateTxProfileHelp(
         tx.profile
     );
+
+    updateTxProfilePresentation(tx);
 }
 
 
@@ -679,6 +807,15 @@ async function loadAlertConfig() {
         currentAlertConfig =
             structuredClone(config);
 
+        if (
+            currentAlertConfig.quality.tx_power.profile
+            === "custom"
+        ) {
+            currentCustomTxConfig = structuredClone(
+                currentAlertConfig.quality.tx_power
+            );
+        }
+
         renderAlertConfig(
             currentAlertConfig
         );
@@ -755,6 +892,13 @@ function applySelectedTxProfile() {
         txProfileCatalog[profileId];
 
     if (
+        currentAlertConfig?.quality.tx_power.profile
+        === "custom"
+    ) {
+        captureCustomTxConfig();
+    }
+
+    if (
         profile &&
         profile.thresholds
     ) {
@@ -769,9 +913,30 @@ function applySelectedTxProfile() {
             profile.thresholds
         );
     } else {
-        updateTxProfileHelp(
-            profileId
-        );
+        let custom = currentCustomTxConfig;
+
+        if (!custom && currentAlertConfig) {
+            custom = buildCustomTxConfig(
+                currentAlertConfig.quality.tx_power
+            );
+        }
+
+        if (custom && currentAlertConfig) {
+            currentCustomTxConfig =
+                structuredClone(custom);
+
+            currentAlertConfig.quality.tx_power =
+                structuredClone(custom);
+
+            renderTxConfig(custom);
+        } else {
+            updateTxProfileHelp(profileId);
+
+            updateTxProfilePresentation({
+                operating_min: null,
+                operating_max: null,
+            });
+        }
     }
 }
 
@@ -785,6 +950,12 @@ function markTxProfileCustom() {
     updateTxProfileHelp(
         "custom"
     );
+
+    const custom = captureCustomTxConfig();
+
+    if (custom) {
+        updateTxProfilePresentation(custom);
+    }
 }
 
 
@@ -862,6 +1033,8 @@ async function saveAlertConfig() {
                 config.quality.tx_power;
 
             tx.profile = "custom";
+            tx.operating_min = null;
+            tx.operating_max = null;
 
             tx.low_alarm =
                 readNumber(
@@ -1014,6 +1187,15 @@ async function saveAlertConfig() {
 
         currentAlertConfig =
             structuredClone(body);
+
+        if (
+            currentAlertConfig.quality.tx_power.profile
+            === "custom"
+        ) {
+            currentCustomTxConfig = structuredClone(
+                currentAlertConfig.quality.tx_power
+            );
+        }
 
         renderAlertConfig(
             currentAlertConfig

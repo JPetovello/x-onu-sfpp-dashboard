@@ -152,6 +152,50 @@ class AlertProfileTests(unittest.TestCase):
             "custom",
         )
 
+    def test_version_two_named_profile_preserves_policy_as_custom(self):
+        config = deepcopy(DEFAULT_ALERT_CONFIG)
+        config["config_version"] = 2
+        config["quality"]["tx_power"] = {
+            "profile": TX_PROFILE_XGSPONST2001_A01,
+            "low_alarm": 2.0,
+            "low_warning": 3.0,
+            "high_warning": None,
+            "high_alarm": None,
+            "cosmetic_great_low": None,
+            "cosmetic_great_high": None,
+        }
+        raw_json = json.dumps(config)
+
+        with sqlite3.connect(self.db_path) as con:
+            con.execute(
+                "UPDATE alert_config SET config_json = ? WHERE id = 1",
+                (raw_json,),
+            )
+
+        manager = AlertManager(self.db_path)
+        loaded = manager.get_config()
+
+        self.assertEqual(loaded["config_version"], 3)
+        self.assertEqual(
+            loaded["quality"]["tx_power"]["profile"],
+            "custom",
+        )
+        self.assertEqual(
+            loaded["quality"]["tx_power"]["low_alarm"],
+            2.0,
+        )
+        self.assertEqual(
+            loaded["quality"]["tx_power"]["low_warning"],
+            3.0,
+        )
+
+        with sqlite3.connect(self.db_path) as con:
+            stored = con.execute(
+                "SELECT config_json FROM alert_config WHERE id = 1"
+            ).fetchone()[0]
+
+        self.assertEqual(stored, raw_json)
+
     def test_profile_save_is_persistent_and_idempotent(self):
         config = deepcopy(DEFAULT_ALERT_CONFIG)
         config["quality"]["tx_power"] = deepcopy(
@@ -297,10 +341,16 @@ class TxAlertStateTests(unittest.TestCase):
         )
         self.manager = AlertManager(db_path)
         config = deepcopy(DEFAULT_ALERT_CONFIG)
-        config["quality"]["tx_power"] = deepcopy(
-            TX_PROFILES[
-                TX_PROFILE_XGSPONST2001_A01
-            ]["thresholds"]
+        config["quality"]["tx_power"].update(
+            {
+                "profile": TX_PROFILE_CUSTOM,
+                "low_alarm": 2.0,
+                "low_warning": 3.0,
+                "high_warning": None,
+                "high_alarm": None,
+                "cosmetic_great_low": None,
+                "cosmetic_great_high": None,
+            }
         )
         self.manager.save_config(config)
         self.events = []
@@ -404,6 +454,57 @@ class TxAlertStateTests(unittest.TestCase):
             "improved",
             self.events[-1]["message"],
         )
+
+
+class Xgsponst2001SpecAlertTests(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        db_path = str(
+            Path(self.tempdir.name) / "metrics.db"
+        )
+        self.manager = AlertManager(db_path)
+        config = deepcopy(DEFAULT_ALERT_CONFIG)
+        config["quality"]["tx_power"] = deepcopy(
+            TX_PROFILES[
+                TX_PROFILE_XGSPONST2001_A01
+            ]["thresholds"]
+        )
+        self.manager.save_config(config)
+        self.events = []
+        self.manager._record_event = (
+            lambda **event: self.events.append(event)
+        )
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def sample(self, value):
+        self.manager._process_tx_power(
+            "2026-09-13T00:00:00+00:00",
+            {"tx_power_dBm": value},
+        )
+
+    def test_below_spec_is_immediate_alarm_without_warning(self):
+        self.sample(3.99)
+
+        self.assertEqual(
+            [event["alert_type"] for event in self.events],
+            ["tx_power_poor"],
+        )
+
+    def test_above_spec_is_immediate_alarm_without_warning(self):
+        self.sample(9.01)
+
+        self.assertEqual(
+            [event["alert_type"] for event in self.events],
+            ["tx_power_poor"],
+        )
+
+    def test_inclusive_envelope_never_warns(self):
+        for value in (4.0, 4.01, 6.22, 7.14, 7.33, 8.99, 9.0):
+            self.sample(value)
+
+        self.assertEqual(self.events, [])
 
 
 if __name__ == "__main__":

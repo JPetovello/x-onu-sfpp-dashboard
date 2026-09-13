@@ -35,6 +35,34 @@
                 ];
             }
 
+            const operatingMin =
+                thresholds.operating_min;
+
+            const operatingMax =
+                thresholds.operating_max;
+
+            if (
+                operatingMin !== null &&
+                operatingMin !== undefined &&
+                operatingMax !== null &&
+                operatingMax !== undefined
+            ) {
+                if (
+                    value < operatingMin ||
+                    value > operatingMax
+                ) {
+                    return [
+                        "ALARM",
+                        "bad"
+                    ];
+                }
+
+                return [
+                    "NORMAL",
+                    "good"
+                ];
+            }
+
             const highAlarm =
                 thresholds.high_alarm;
 

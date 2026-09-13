@@ -12,6 +12,18 @@ def classify_tx_power(value, thresholds):
     if not math.isfinite(value):
         return ("UNKNOWN", "unknown", None)
 
+    operating_min = thresholds.get("operating_min")
+    operating_max = thresholds.get("operating_max")
+
+    if (
+        operating_min is not None
+        and operating_max is not None
+    ):
+        if value < operating_min or value > operating_max:
+            return ("ALARM", "bad", value)
+
+        return ("NORMAL", "good", value)
+
     low_alarm = thresholds["low_alarm"]
     low_warning = thresholds["low_warning"]
     high_warning = thresholds.get("high_warning")

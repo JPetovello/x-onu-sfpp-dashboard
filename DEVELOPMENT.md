@@ -123,11 +123,13 @@ When modifying counter handling, preserve the concepts of:
 
 #### TX health profiles
 
-TX optical health uses configuration schema version `2`. The persisted `quality.tx_power` object has this shape:
+TX optical health uses configuration schema version `3`. The persisted Legacy `quality.tx_power` object has this shape:
 
 ```json
 {
   "profile": "legacy",
+  "operating_min": null,
+  "operating_max": null,
   "low_alarm": 1,
   "low_warning": 2,
   "high_warning": 7,
@@ -137,15 +139,33 @@ TX optical health uses configuration schema version `2`. The persisted `quality.
 }
 ```
 
-`high_warning` and `high_alarm` are independently optional. JSON `null` means the boundary is disabled. Do not replace a disabled boundary with `Infinity`, `999`, the SFF-8472 maximum, or another sentinel.
+`high_warning` and `high_alarm` remain independently optional for Custom profiles. JSON `null` means the boundary is disabled. Do not replace a disabled boundary with `Infinity`, `999`, the SFF-8472 maximum, or another sentinel.
 
 Supported profile identifiers are:
 
 - `legacy`: exact original dashboard grading and alert boundaries.
-- `xgsponst2001-a01`: low alarm `2.00 dBm`, low warning `3.00 dBm`, and no high-side warning or alarm.
+- `xgsponst2001-a01`: inclusive `4.00-9.00 dBm` XGS-PON operating envelope with no WARNING state.
 - `custom`: user-edited threshold values.
 
-The XGSPONST2001 A-01 module stores `0xFFFF` for both high TX threshold words. That value decodes to approximately `8.16 dBm` because it is the maximum representable SFF-8472 TX-power value. It is treated as an absent threshold, not as a calibrated alarm.
+The named XGSPONST2001 A-01 profile uses this distinct shape:
+
+```json
+{
+  "profile": "xgsponst2001-a01",
+  "operating_min": 4.0,
+  "operating_max": 9.0,
+  "low_alarm": null,
+  "low_warning": null,
+  "high_warning": null,
+  "high_alarm": null,
+  "cosmetic_great_low": null,
+  "cosmetic_great_high": null
+}
+```
+
+Values below `operating_min` or above `operating_max` are ALARM; both boundaries themselves are NORMAL. Because the specification defines no intermediate warning bands, an out-of-spec observation follows the immediate alarm path rather than warning debounce.
+
+The EEPROM investigation is background evidence, not this named profile's operational source. The module reports low alarm `2.00 dBm`, low warning `3.00 dBm`, and `0xFFFF` for both high TX threshold words. `0xFFFF` decodes to approximately `8.16 dBm` because it is the maximum representable SFF-8472 TX-power value. Those four EEPROM values are not used by the specification-driven profile.
 
 Operational classification is NORMAL, WARNING, ALARM, or UNKNOWN. The Legacy profile retains GOOD, FAIR, POOR, and cosmetic GREAT display labels for compatibility, but their operational levels are still good, warn, and bad. GREAT must never override a real warning or alarm and must never trigger an alert.
 
@@ -161,7 +181,7 @@ RX, thermal, reachability, active-alarm, GEM, and counter state must not be rese
 
 TX classification and state-transition processing are held under the same re-entrant manager lock used when activating and re-baselining a changed TX policy. Preserve this atomic boundary; otherwise a collector sample could be classified under one policy and processed after another policy becomes active.
 
-Unversioned saved configurations are normalized in memory. Exact original defaults become `legacy`; user-edited values become `custom`. The stored row is not rewritten merely because the application loaded it. An explicit settings save persists schema version `2`. Do not infer migration consent from values that happen to match a default.
+Unversioned saved configurations are normalized in memory. Exact original defaults become `legacy`; user-edited values become `custom`. Version 2 Legacy and Custom configurations gain disabled operating-envelope fields without changing their thresholds. A version 2 `xgsponst2001-a01` configuration becomes Custom in memory so its former `2.00/3.00 dBm` behavior is preserved rather than silently adopting the new specification policy. The stored row is not rewritten merely because the application loaded it. An explicit settings save persists schema version `3`. Do not infer migration consent from values that happen to match a default.
 
 ### `notifications.py`
 

@@ -140,20 +140,21 @@ The following profiles are available:
 
 Legacy retains the historical GOOD / FAIR / POOR display wording. GREAT is only a cosmetic subdivision of the healthy state: it does not change alert severity or overall operational health.
 
-**XGSPONST2001 A-01** reflects the DDMI thresholds read from that module revision:
+**XGSPONST2001 A-01** uses the documented XGS-PON upstream mean launch-power operating specification:
 
-    Low alarm:     2.00 dBm
-    Low warning:   3.00 dBm
-    High warning:  Disabled
-    High alarm:    Disabled
+    Operating minimum: 4.00 dBm
+    Operating maximum: 9.00 dBm
+    Warning bands:     None
 
 Its behavior is:
 
-    TX <= 2.00 dBm        ALARM
-    2.00 < TX < 3.00 dBm WARNING
-    TX >= 3.00 dBm        NORMAL
+    TX < 4.00 dBm         ALARM / OUT OF SPEC
+    4.00 <= TX <= 9.00   NORMAL
+    TX > 9.00 dBm         ALARM / OUT OF SPEC
 
-The module stores `0xFFFF` for both upper TX thresholds. This is the maximum SFF-8472 TX-power encoding, approximately `8.16 dBm`, and is not treated as a meaningful calibrated high-side threshold. No replacement high alarm is invented. Consequently, recurring readings such as `7.1-7.3 dBm` remain NORMAL with this profile.
+This specification defines an operating envelope, not separate warning thresholds. A value outside the envelope therefore enters the existing immediate alarm path without warning debounce. Readings such as `6.22 dBm` and `7.1-7.3 dBm` are NORMAL.
+
+The EEPROM investigation remains useful background but does not define this profile's operational policy. The module reports low alarm `2.00 dBm`, low warning `3.00 dBm`, and `0xFFFF` for both upper threshold words. `0xFFFF` is the maximum SFF-8472 TX-power encoding, approximately `8.16 dBm`, rather than a meaningful calibrated high-side threshold. None of those EEPROM values are used as operational thresholds by the XGSPONST2001 A-01 profile.
 
 **Custom** allows user-defined low thresholds and optional upper warning and alarm thresholds. Leaving an upper field blank disables that boundary; disabled thresholds are stored as JSON `null`, not a magic numeric value. Manually editing a TX threshold changes the selected profile to Custom.
 

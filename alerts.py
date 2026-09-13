@@ -9,7 +9,7 @@ from notifications import NotificationManager
 from tx_health import classify_tx_power
 
 
-CONFIG_VERSION = 2
+CONFIG_VERSION = 3
 
 TX_PROFILE_LEGACY = "legacy"
 TX_PROFILE_XGSPONST2001_A01 = (
@@ -27,6 +27,8 @@ TX_PROFILES = {
         ),
         "thresholds": {
             "profile": TX_PROFILE_LEGACY,
+            "operating_min": None,
+            "operating_max": None,
             "low_alarm": 1,
             "low_warning": 2,
             "high_warning": 7,
@@ -39,15 +41,17 @@ TX_PROFILES = {
         "id": TX_PROFILE_XGSPONST2001_A01,
         "label": "XGSPONST2001 A-01",
         "description": (
-            "Uses the programmed low-side DDMI "
-            "thresholds. The 0xFFFF upper values "
-            "are disabled because they are not "
-            "meaningful calibrated thresholds."
+            "Uses the documented XGS-PON TX "
+            "operating specification of 4.00-9.00 "
+            "dBm inclusive. Values outside that "
+            "envelope are out of specification."
         ),
         "thresholds": {
             "profile": TX_PROFILE_XGSPONST2001_A01,
-            "low_alarm": 2.0,
-            "low_warning": 3.0,
+            "operating_min": 4.0,
+            "operating_max": 9.0,
+            "low_alarm": None,
+            "low_warning": None,
             "high_warning": None,
             "high_alarm": None,
             "cosmetic_great_low": None,
@@ -538,15 +542,10 @@ class AlertManager:
             )
 
         for key in (
+            "operating_min",
+            "operating_max",
             "low_alarm",
             "low_warning",
-        ):
-            require_number(
-                tx[key],
-                f"quality.tx_power.{key}",
-            )
-
-        for key in (
             "high_warning",
             "high_alarm",
             "cosmetic_great_low",
@@ -557,42 +556,83 @@ class AlertManager:
                 f"quality.tx_power.{key}",
             )
 
-        if tx["low_alarm"] >= tx["low_warning"]:
-            raise ValueError(
-                "TX thresholds must satisfy "
-                "low_alarm < low_warning"
-            )
-
-        high_warning = tx["high_warning"]
-        high_alarm = tx["high_alarm"]
+        operating_min = tx["operating_min"]
+        operating_max = tx["operating_max"]
 
         if (
-            high_warning is not None
-            and high_warning <= tx["low_warning"]
+            (operating_min is None)
+            != (operating_max is None)
         ):
             raise ValueError(
-                "TX high_warning must be greater "
-                "than low_warning"
+                "TX operating envelope bounds must "
+                "both be set or both be disabled"
             )
 
         if (
-            high_alarm is not None
-            and high_alarm <= tx["low_warning"]
+            operating_min is not None
+            and operating_min >= operating_max
         ):
             raise ValueError(
-                "TX high_alarm must be greater "
-                "than low_warning"
+                "TX operating envelope must satisfy "
+                "operating_min < operating_max"
             )
 
         if (
-            high_warning is not None
-            and high_alarm is not None
-            and high_warning >= high_alarm
+            profile != TX_PROFILE_XGSPONST2001_A01
+            and operating_min is not None
         ):
             raise ValueError(
-                "TX high thresholds must satisfy "
-                "high_warning < high_alarm"
+                "TX operating envelope is only valid "
+                "for the xgsponst2001-a01 profile"
             )
+
+        if profile != TX_PROFILE_XGSPONST2001_A01:
+            require_number(
+                tx["low_alarm"],
+                "quality.tx_power.low_alarm",
+            )
+
+            require_number(
+                tx["low_warning"],
+                "quality.tx_power.low_warning",
+            )
+
+            if tx["low_alarm"] >= tx["low_warning"]:
+                raise ValueError(
+                    "TX thresholds must satisfy "
+                    "low_alarm < low_warning"
+                )
+
+            high_warning = tx["high_warning"]
+            high_alarm = tx["high_alarm"]
+
+            if (
+                high_warning is not None
+                and high_warning <= tx["low_warning"]
+            ):
+                raise ValueError(
+                    "TX high_warning must be greater "
+                    "than low_warning"
+                )
+
+            if (
+                high_alarm is not None
+                and high_alarm <= tx["low_warning"]
+            ):
+                raise ValueError(
+                    "TX high_alarm must be greater "
+                    "than low_warning"
+                )
+
+            if (
+                high_warning is not None
+                and high_alarm is not None
+                and high_warning >= high_alarm
+            ):
+                raise ValueError(
+                    "TX high thresholds must satisfy "
+                    "high_warning < high_alarm"
+                )
 
         great_low = tx["cosmetic_great_low"]
         great_high = tx["cosmetic_great_high"]
@@ -958,6 +998,8 @@ class AlertManager:
 
                 quality["tx_power"] = {
                     "profile": profile,
+                    "operating_min": None,
+                    "operating_max": None,
                     "low_alarm": tx["poor_low"],
                     "low_warning": tx["fair_low"],
                     "high_warning": tx["fair_high"],
@@ -966,6 +1008,37 @@ class AlertManager:
                     "cosmetic_great_high": tx["great_high"],
                 }
 
+                config["config_version"] = (
+                    CONFIG_VERSION
+                )
+
+        tx = quality.get(
+            "tx_power"
+        )
+
+        if (
+            config.get("config_version") == 2
+            and isinstance(tx, dict)
+        ):
+            version_two_keys = {
+                "profile",
+                "low_alarm",
+                "low_warning",
+                "high_warning",
+                "high_alarm",
+                "cosmetic_great_low",
+                "cosmetic_great_high",
+            }
+
+            if set(tx.keys()) == version_two_keys:
+                if (
+                    tx.get("profile")
+                    == TX_PROFILE_XGSPONST2001_A01
+                ):
+                    tx["profile"] = TX_PROFILE_CUSTOM
+
+                tx["operating_min"] = None
+                tx["operating_max"] = None
                 config["config_version"] = (
                     CONFIG_VERSION
                 )
