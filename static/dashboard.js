@@ -10,6 +10,7 @@ if (!VALID_HISTORY_RANGES.has(selectedRange)) {
 let latestCore = null;
 let latestAdvanced = null;
 let latestAdvancedStats = null;
+let alertConfig = null;
 
 let coreHistory = [];
 let advancedHistory = [];
@@ -289,10 +290,16 @@ function rxStatus(
     value =
         Number(value);
 
+    const thresholds =
+        alertConfig &&
+        alertConfig.quality &&
+        alertConfig.quality.rx_power;
+
     if (
         !Number.isFinite(
             value
-        )
+        ) ||
+        !thresholds
     ) {
         return [
             "UNKNOWN",
@@ -301,8 +308,8 @@ function rxStatus(
     }
 
     if (
-        value <= -27 ||
-        value > -8
+        value <= thresholds.poor_low ||
+        value > thresholds.poor_high
     ) {
         return [
             "POOR",
@@ -311,7 +318,7 @@ function rxStatus(
     }
 
     if (
-        value < -24
+        value < thresholds.fair_low
     ) {
         return [
             "FAIR",
@@ -320,8 +327,8 @@ function rxStatus(
     }
 
     if (
-        value >= -20 &&
-        value <= -14
+        value >= thresholds.great_low &&
+        value <= thresholds.great_high
     ) {
         return [
             "GREAT",
@@ -342,10 +349,16 @@ function txStatus(
     value =
         Number(value);
 
+    const thresholds =
+        alertConfig &&
+        alertConfig.quality &&
+        alertConfig.quality.tx_power;
+
     if (
         !Number.isFinite(
             value
-        )
+        ) ||
+        !thresholds
     ) {
         return [
             "UNKNOWN",
@@ -354,8 +367,8 @@ function txStatus(
     }
 
     if (
-        value <= 1 ||
-        value >= 8
+        value <= thresholds.poor_low ||
+        value >= thresholds.poor_high
     ) {
         return [
             "POOR",
@@ -364,8 +377,8 @@ function txStatus(
     }
 
     if (
-        value < 2 ||
-        value > 7
+        value < thresholds.fair_low ||
+        value > thresholds.fair_high
     ) {
         return [
             "FAIR",
@@ -374,8 +387,8 @@ function txStatus(
     }
 
     if (
-        value >= 4 &&
-        value <= 5
+        value >= thresholds.great_low &&
+        value <= thresholds.great_high
     ) {
         return [
             "GREAT",
@@ -403,8 +416,14 @@ function thermalStatus(
         Number.isFinite
     );
 
+    const thresholds =
+        alertConfig &&
+        alertConfig.quality &&
+        alertConfig.quality.thermal;
+
     if (
-        !values.length
+        !values.length ||
+        !thresholds
     ) {
         return [
             "UNKNOWN",
@@ -418,7 +437,7 @@ function thermalStatus(
         );
 
     if (
-        maximum >= 85
+        maximum >= thresholds.hot
     ) {
         return [
             "HOT",
@@ -427,7 +446,7 @@ function thermalStatus(
     }
 
     if (
-        maximum >= 75
+        maximum >= thresholds.warm
     ) {
         return [
             "WARM",
@@ -1347,6 +1366,30 @@ function updateOverallHealth() {
 }
 
 
+async function loadAlertConfig() {
+    try {
+        const response =
+            await fetch(
+                "/api/alert-config"
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        alertConfig =
+            await response.json();
+    } catch (error) {
+        console.error(
+            "Unable to load alert configuration:",
+            error
+        );
+    }
+}
+
+
 async function loadCurrent() {
     try {
         const response =
@@ -2172,6 +2215,8 @@ function drawAllCharts() {
 
 
 async function refreshCurrent() {
+    await loadAlertConfig();
+
     await Promise.all([
         loadCurrent(),
         loadAdvancedCurrent()
