@@ -1201,33 +1201,214 @@ class AlertManager:
         global ALERT_CONFIG
 
         with self.lock:
-            previous_tx = deepcopy(
-                ALERT_CONFIG["quality"][
-                    "tx_power"
-                ]
+            previous_config = deepcopy(
+                ALERT_CONFIG
             )
 
             ALERT_CONFIG = deepcopy(
                 config_copy
             )
 
-            if (
-                previous_tx
-                != config_copy["quality"][
-                    "tx_power"
-                ]
-            ):
-                self._reset_tx_runtime_state_locked()
+            self._reset_changed_runtime_state_locked(
+                previous_config,
+                config_copy,
+            )
 
         return self.get_config()
 
 
-    def _reset_tx_runtime_state_locked(
+    def _reset_changed_runtime_state_locked(
         self,
+        previous_config,
+        current_config,
+    ):
+        previous_quality = (
+            previous_config["quality"]
+        )
+
+        current_quality = (
+            current_config["quality"]
+        )
+
+        if (
+            previous_quality["warning_samples"]
+            !=
+            current_quality["warning_samples"]
+        ):
+            for metric_name in (
+                "rx_power_dBm",
+                "tx_power_dBm",
+                "temperature_max",
+            ):
+                self._reset_quality_runtime_state_locked(
+                    metric_name
+                )
+
+        if (
+            previous_quality["rx_power"]
+            !=
+            current_quality["rx_power"]
+        ):
+            self._reset_quality_runtime_state_locked(
+                "rx_power_dBm"
+            )
+
+        if (
+            previous_quality["tx_power"]
+            !=
+            current_quality["tx_power"]
+        ):
+            self._reset_tx_runtime_state_locked()
+
+        if (
+            previous_quality["thermal"]
+            !=
+            current_quality["thermal"]
+        ):
+            self._reset_quality_runtime_state_locked(
+                "temperature_max"
+            )
+
+        if (
+            previous_config["ploam"][
+                "operational_state"
+            ]
+            !=
+            current_config["ploam"][
+                "operational_state"
+            ]
+        ):
+            self.previous.pop(
+                ("ploam_operational",),
+                None,
+            )
+
+        if (
+            previous_config["core_reachability"][
+                "failure_samples"
+            ]
+            !=
+            current_config["core_reachability"][
+                "failure_samples"
+            ]
+        ):
+            state_key = (
+                "core_reachability",
+            )
+
+            self.previous.pop(
+                state_key,
+                None,
+            )
+
+            self.pending.pop(
+                state_key,
+                None,
+            )
+
+        if (
+            previous_config["gem_key_errors"][
+                "min_delta"
+            ]
+            !=
+            current_config["gem_key_errors"][
+                "min_delta"
+            ]
+        ):
+            for key in list(self.previous):
+                if (
+                    isinstance(key, tuple)
+                    and
+                    key
+                    and
+                    key[0] == "gem_key_errors"
+                ):
+                    self.previous.pop(
+                        key,
+                        None,
+                    )
+
+        previous_counters = {
+            rule["metric_name"]: rule
+            for rule
+            in previous_config["counters"]
+        }
+
+        current_counters = {
+            rule["metric_name"]: rule
+            for rule
+            in current_config["counters"]
+        }
+
+        for metric_name in (
+            set(previous_counters)
+            |
+            set(current_counters)
+        ):
+            previous_rule = (
+                previous_counters.get(
+                    metric_name
+                )
+            )
+
+            current_rule = (
+                current_counters.get(
+                    metric_name
+                )
+            )
+
+            previous_policy = (
+                None
+                if previous_rule is None
+                else (
+                    previous_rule["alert_type"],
+                    previous_rule["min_delta"],
+                    previous_rule[
+                        "cooldown_seconds"
+                    ],
+                )
+            )
+
+            current_policy = (
+                None
+                if current_rule is None
+                else (
+                    current_rule["alert_type"],
+                    current_rule["min_delta"],
+                    current_rule[
+                        "cooldown_seconds"
+                    ],
+                )
+            )
+
+            if previous_policy == current_policy:
+                continue
+
+            alert_types = set()
+
+            if previous_rule is not None:
+                alert_types.add(
+                    previous_rule["alert_type"]
+                )
+
+            if current_rule is not None:
+                alert_types.add(
+                    current_rule["alert_type"]
+                )
+
+            self._reset_counter_runtime_state_locked(
+                metric_name,
+                alert_types,
+            )
+
+
+    def _reset_quality_runtime_state_locked(
+        self,
+        metric_name,
     ):
         state_key = (
             "core_quality",
-            "tx_power_dBm",
+            metric_name,
         )
 
         active_key = (
@@ -1254,6 +1435,44 @@ class AlertManager:
             pending_key,
             None,
         )
+
+
+    def _reset_tx_runtime_state_locked(
+        self,
+    ):
+        self._reset_quality_runtime_state_locked(
+            "tx_power_dBm"
+        )
+
+
+    def _reset_counter_runtime_state_locked(
+        self,
+        metric_name,
+        alert_types,
+    ):
+        state_key = (
+            "counter",
+            metric_name,
+        )
+
+        self.previous.pop(
+            state_key,
+            None,
+        )
+
+        self.pending.pop(
+            state_key,
+            None,
+        )
+
+        for alert_type in alert_types:
+            self.last_alert.pop(
+                (
+                    "alert",
+                    alert_type,
+                ),
+                None,
+            )
 
 
     def _timestamp_seconds(
