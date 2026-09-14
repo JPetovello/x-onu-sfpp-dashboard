@@ -10,3 +10,6 @@ __pycache__
 README.md
 LICENSE
 ca_profile.xml
+tests/
+DEVELOPMENT.md
+requirements.in
