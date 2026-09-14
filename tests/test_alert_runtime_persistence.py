@@ -7,6 +7,7 @@ import unittest
 from alerts import AlertManager
 
 
+from contextlib import closing
 class AlertRuntimePersistenceTests(unittest.TestCase):
 
     def setUp(self):
@@ -193,9 +194,9 @@ class AlertRuntimePersistenceTests(unittest.TestCase):
 
         manager._persist_runtime_state()
 
-        with sqlite3.connect(
+        with closing(sqlite3.connect(
             self.db_path
-        ) as con:
+        )) as con, con:
             con.execute(
                 """
                 UPDATE alert_runtime_state
@@ -233,9 +234,9 @@ class AlertRuntimePersistenceTests(unittest.TestCase):
             manager.get_config()
         )
 
-        with sqlite3.connect(
+        with closing(sqlite3.connect(
             self.db_path
-        ) as con:
+        )) as con, con:
             con.execute(
                 """
                 INSERT INTO alert_runtime_state (
@@ -346,9 +347,9 @@ class AlertRuntimePersistenceTests(unittest.TestCase):
                 ),
         }
 
-        with sqlite3.connect(
+        with closing(sqlite3.connect(
             self.db_path
-        ) as con:
+        )) as con, con:
             con.execute(
                 """
                 INSERT INTO alert_runtime_state (
@@ -413,9 +414,9 @@ class AlertRuntimePersistenceTests(unittest.TestCase):
                 ),
         }
 
-        with sqlite3.connect(
+        with closing(sqlite3.connect(
             self.db_path
-        ) as con:
+        )) as con, con:
             con.execute(
                 """
                 INSERT INTO alert_runtime_state (

@@ -9,6 +9,7 @@ import app as app_module
 from advanced import AdvancedCollector
 
 
+from contextlib import closing
 class HistoryDownsamplingTests(unittest.TestCase):
 
     def setUp(self):
@@ -42,7 +43,7 @@ class HistoryDownsamplingTests(unittest.TestCase):
         ).isoformat()
 
     def _create_core_db(self):
-        with sqlite3.connect(self.core_db) as con:
+        with closing(sqlite3.connect(self.core_db)) as con, con:
             con.execute("""
                 CREATE TABLE samples (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +65,7 @@ class HistoryDownsamplingTests(unittest.TestCase):
             """)
 
     def _create_advanced_db(self):
-        with sqlite3.connect(self.advanced_db) as con:
+        with closing(sqlite3.connect(self.advanced_db)) as con, con:
             con.execute("""
                 CREATE TABLE advanced_samples (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,7 +113,7 @@ class HistoryDownsamplingTests(unittest.TestCase):
             for index in range(count)
         ]
 
-        with sqlite3.connect(self.core_db) as con:
+        with closing(sqlite3.connect(self.core_db)) as con, con:
             con.executemany(
                 """
                 INSERT INTO samples (
@@ -140,7 +141,7 @@ class HistoryDownsamplingTests(unittest.TestCase):
             for index in range(count)
         ]
 
-        with sqlite3.connect(self.advanced_db) as con:
+        with closing(sqlite3.connect(self.advanced_db)) as con, con:
             con.executemany(
                 """
                 INSERT INTO advanced_samples (

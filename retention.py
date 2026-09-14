@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 
 
@@ -72,7 +73,7 @@ class RetentionManager:
         }
 
     def _init_db(self):
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             con.execute(
                 """
                 CREATE TABLE IF NOT EXISTS retention_config (
@@ -107,7 +108,7 @@ class RetentionManager:
                 )
 
     def get_config(self):
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             row = con.execute(
                 """
                 SELECT config_json
@@ -282,7 +283,7 @@ class RetentionManager:
             "alert_days": alert_days,
         }
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             con.execute(
                 """
                 INSERT INTO retention_config (
@@ -318,7 +319,7 @@ class RetentionManager:
             "alert_events": 0,
         }
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             if telemetry_days is not None:
                 cutoff = (
                     now

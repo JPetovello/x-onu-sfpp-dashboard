@@ -5,6 +5,8 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
+from contextlib import closing
+
 from alerts import (
     AlertManager,
     DEFAULT_ALERT_CONFIG,
@@ -110,7 +112,7 @@ class AlertProfileTests(unittest.TestCase):
         old_config = self._old_config()
         raw_json = json.dumps(old_config)
 
-        with sqlite3.connect(self.db_path) as con:
+        with closing(sqlite3.connect(self.db_path)) as con, con:
             con.execute(
                 "UPDATE alert_config SET config_json = ? WHERE id = 1",
                 (raw_json,),
@@ -124,7 +126,7 @@ class AlertProfileTests(unittest.TestCase):
             "legacy",
         )
 
-        with sqlite3.connect(self.db_path) as con:
+        with closing(sqlite3.connect(self.db_path)) as con, con:
             stored = con.execute(
                 "SELECT config_json FROM alert_config WHERE id = 1"
             ).fetchone()[0]
@@ -137,7 +139,7 @@ class AlertProfileTests(unittest.TestCase):
             "fair_high"
         ] = 7.5
 
-        with sqlite3.connect(self.db_path) as con:
+        with closing(sqlite3.connect(self.db_path)) as con, con:
             con.execute(
                 "UPDATE alert_config SET config_json = ? WHERE id = 1",
                 (json.dumps(old_config),),
@@ -166,7 +168,7 @@ class AlertProfileTests(unittest.TestCase):
         }
         raw_json = json.dumps(config)
 
-        with sqlite3.connect(self.db_path) as con:
+        with closing(sqlite3.connect(self.db_path)) as con, con:
             con.execute(
                 "UPDATE alert_config SET config_json = ? WHERE id = 1",
                 (raw_json,),
@@ -189,7 +191,7 @@ class AlertProfileTests(unittest.TestCase):
             3.0,
         )
 
-        with sqlite3.connect(self.db_path) as con:
+        with closing(sqlite3.connect(self.db_path)) as con, con:
             stored = con.execute(
                 "SELECT config_json FROM alert_config WHERE id = 1"
             ).fetchone()[0]

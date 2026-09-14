@@ -10,6 +10,7 @@ import unittest
 from unittest import mock
 
 
+from contextlib import closing
 class TelemetryValidationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -87,9 +88,9 @@ class TelemetryValidationTests(unittest.TestCase):
             "2026-09-14T00:00:00+00:00",
         )
 
-        with sqlite3.connect(
+        with closing(sqlite3.connect(
             self.app_module.DB_PATH
-        ) as connection:
+        )) as connection, connection:
             stored = connection.execute(
                 "SELECT rx_power_dBm FROM samples "
                 "ORDER BY id DESC LIMIT 1"
@@ -98,7 +99,7 @@ class TelemetryValidationTests(unittest.TestCase):
         self.assertIsNone(stored)
 
     def test_legacy_non_finite_core_history_is_json_safe(self):
-        with self.app_module.db_connect() as connection:
+        with closing(self.app_module.db_connect()) as connection, connection:
             connection.execute(
                 """
                 INSERT INTO samples (ts, rx_power_dBm)

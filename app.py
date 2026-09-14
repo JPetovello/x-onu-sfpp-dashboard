@@ -2,6 +2,7 @@ import hmac
 import math
 import os
 import sqlite3
+from contextlib import closing
 import threading
 import time
 from datetime import datetime, timezone, timedelta
@@ -255,7 +256,7 @@ def db_connect():
 
 
 def init_db():
-    with db_connect() as con:
+    with closing(db_connect()) as con, con:
         con.execute("""
             CREATE TABLE IF NOT EXISTS samples (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -349,7 +350,7 @@ def save_sample(metrics, ts):
         METRIC_COLUMNS
     )
 
-    with db_connect() as con:
+    with closing(db_connect()) as con, con:
         con.execute(
             f"""
             INSERT INTO samples
@@ -593,7 +594,7 @@ def api_history():
 
     max_points = 900
 
-    with db_connect() as con:
+    with closing(db_connect()) as con, con:
 
         row_count = con.execute(
             """
@@ -672,7 +673,7 @@ def api_stats():
         - delta
     ).isoformat()
 
-    with db_connect() as con:
+    with closing(db_connect()) as con, con:
 
         row = con.execute("""
             SELECT
@@ -723,7 +724,7 @@ def api_stats():
 @app.route("/api/info")
 def api_info():
 
-    with db_connect() as con:
+    with closing(db_connect()) as con, con:
 
         row = con.execute("""
             SELECT

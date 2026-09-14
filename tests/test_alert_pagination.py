@@ -16,6 +16,7 @@ class FakeConnection:
 
     def __init__(self):
         self.params = None
+        self.closed = False
 
     def __enter__(self):
         return self
@@ -27,6 +28,9 @@ class FakeConnection:
         traceback,
     ):
         return False
+
+    def close(self):
+        self.closed = True
 
     def execute(
         self,
@@ -54,6 +58,8 @@ class AlertPaginationTests(unittest.TestCase):
             offset=250,
         )
 
+        self.assertTrue(self.connection.closed)
+
         self.assertEqual(
             self.connection.params,
             (
@@ -68,6 +74,8 @@ class AlertPaginationTests(unittest.TestCase):
             offset=-500,
         )
 
+        self.assertTrue(self.connection.closed)
+
         self.assertEqual(
             self.connection.params,
             (
@@ -81,6 +89,8 @@ class AlertPaginationTests(unittest.TestCase):
             limit=5000,
             offset=10**12,
         )
+
+        self.assertTrue(self.connection.closed)
 
         self.assertEqual(
             self.connection.params,

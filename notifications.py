@@ -5,6 +5,7 @@ import os
 import queue
 import socket
 import sqlite3
+from contextlib import closing
 import threading
 import time
 import urllib.error
@@ -603,7 +604,7 @@ class NotificationManager:
 
 
     def _init_db(self):
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             con.execute("""
                 CREATE TABLE IF NOT EXISTS notification_config (
                     id INTEGER PRIMARY KEY
@@ -865,7 +866,7 @@ class NotificationManager:
             separators=(",", ":"),
         )
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             con.execute(
                 """
                 INSERT INTO notification_config (
@@ -886,7 +887,7 @@ class NotificationManager:
     def _load_config(self):
         global NOTIFICATION_CONFIG
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             row = con.execute(
                 """
                 SELECT config_json

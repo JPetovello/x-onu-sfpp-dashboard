@@ -67,6 +67,7 @@ class SecurityHeaderTests(unittest.TestCase):
 
     def test_static_response_has_security_headers(self):
         response = self.client.get("/static/style.css")
+        self.addCleanup(response.close)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(

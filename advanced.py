@@ -3,6 +3,7 @@ import math
 import os
 import re
 import sqlite3
+from contextlib import closing
 import threading
 import time
 from datetime import datetime, timezone, timedelta
@@ -144,7 +145,7 @@ class AdvancedCollector:
 
     def _init_db(self):
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
 
             con.execute("""
                 CREATE TABLE IF NOT EXISTS
@@ -1232,7 +1233,7 @@ pontop -b -g 'Optical Interface Info'
             )
         )
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
 
             con.execute(
                 f"""
@@ -1263,7 +1264,7 @@ pontop -b -g 'Optical Interface Info'
             )
         )
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
 
             con.execute(
                 """
@@ -1524,7 +1525,7 @@ pontop -b -g 'Optical Interface Info'
 
         max_points = 900
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
 
             row_count = con.execute(
                 """
@@ -1627,7 +1628,7 @@ pontop -b -g 'Optical Interface Info'
             delta
         ).isoformat()
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
 
             first = con.execute("""
                 SELECT *

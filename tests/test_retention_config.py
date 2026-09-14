@@ -6,6 +6,7 @@ import unittest
 from retention import RetentionManager
 
 
+from contextlib import closing
 class RetentionConfigTests(unittest.TestCase):
 
     def setUp(self):
@@ -23,7 +24,7 @@ class RetentionConfigTests(unittest.TestCase):
         self.tempdir.cleanup()
 
     def _store_raw(self, value):
-        with self.manager._connect_db() as con:
+        with closing(self.manager._connect_db()) as con, con:
             con.execute(
                 """
                 UPDATE retention_config

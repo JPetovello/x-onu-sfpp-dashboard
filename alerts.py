@@ -1,6 +1,7 @@
 import json
 import math
 import sqlite3
+from contextlib import closing
 import threading
 from copy import deepcopy
 from datetime import datetime
@@ -230,7 +231,7 @@ class AlertManager:
 
 
     def _init_db(self):
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             con.execute("""
                 CREATE TABLE IF NOT EXISTS alert_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1778,7 +1779,7 @@ class AlertManager:
     def _load_config(
         self,
     ):
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             row = con.execute(
                 """
                 SELECT config_json
@@ -1885,7 +1886,7 @@ class AlertManager:
             )
         )
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             self._write_config_row(
                 con,
                 config_copy,
@@ -2262,7 +2263,7 @@ class AlertManager:
         external provider is unavailable or misconfigured.
         """
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             con.execute(
                 """
                 INSERT INTO alert_events (
@@ -3563,7 +3564,7 @@ class AlertManager:
             ),
         )
 
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             rows = con.execute(
                 """
                 SELECT
@@ -3593,7 +3594,7 @@ class AlertManager:
         ]
 
     def event_count(self):
-        with self._connect_db() as con:
+        with closing(self._connect_db()) as con, con:
             row = con.execute(
                 """
                 SELECT COUNT(*) AS count
