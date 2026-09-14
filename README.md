@@ -663,6 +663,36 @@ Default:
 
 URL of the 8311 metrics endpoint.
 
+#### ONT_TLS_VERIFY
+
+Default:
+
+    false
+
+Controls TLS certificate verification for the core ONT metrics request.
+
+Set to `true` to require normal certificate-chain and hostname or IP
+verification using the container's trusted CA certificates.
+
+The default remains `false` for compatibility with ONTs that use
+self-signed or locally issued certificates.
+
+#### ONT_TLS_CA_BUNDLE
+
+Default: unset.
+
+Optional path to a PEM CA bundle used to verify the ONT certificate.
+
+Setting this variable enables verification using that CA bundle.
+`ONT_TLS_VERIFY` may be left unset or set to `true`.
+
+Configuring a CA bundle together with `ONT_TLS_VERIFY=false` is rejected
+as contradictory.
+
+A trusted CA does not disable hostname or IP identity checking. The ONT
+certificate must also be valid for the hostname or IP address used in
+`ONT_URL`.
+
 #### POLL_SECONDS
 
 Default:

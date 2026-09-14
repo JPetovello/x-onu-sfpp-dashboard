@@ -7,13 +7,14 @@ import time
 from datetime import datetime, timezone, timedelta
 
 import requests
+import warnings
+
 import urllib3
 from flask import Flask, Response, jsonify, render_template, request
 
 from advanced import AdvancedCollector
 from retention import RetentionManager
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 DB_PATH = os.path.join(DATA_DIR, "metrics.db")
@@ -27,6 +28,46 @@ ONT_URL = os.environ.get(
 POLL_SECONDS = max(2, int(os.environ.get("POLL_SECONDS", "10")))
 RETENTION_DAYS = max(1, int(os.environ.get("RETENTION_DAYS", "30")))
 REQUEST_TIMEOUT = max(1, int(os.environ.get("REQUEST_TIMEOUT", "5")))
+
+
+def load_ont_tls_verify():
+    raw_verify = os.environ.get("ONT_TLS_VERIFY")
+    ca_bundle = os.environ.get(
+        "ONT_TLS_CA_BUNDLE",
+        "",
+    ).strip()
+
+    parsed_verify = None
+
+    if raw_verify is not None:
+        value = raw_verify.strip().lower()
+
+        if value in {"1", "true", "yes", "on"}:
+            parsed_verify = True
+        elif value in {"0", "false", "no", "off"}:
+            parsed_verify = False
+        else:
+            raise RuntimeError(
+                "ONT_TLS_VERIFY must be one of: "
+                "true, false, 1, 0, yes, no, on, off"
+            )
+
+    if ca_bundle:
+        if parsed_verify is False:
+            raise RuntimeError(
+                "ONT_TLS_CA_BUNDLE cannot be used with "
+                "ONT_TLS_VERIFY=false"
+            )
+
+        return ca_bundle
+
+    if parsed_verify is None:
+        return False
+
+    return parsed_verify
+
+
+ONT_TLS_VERIFY = load_ont_tls_verify()
 REQUIRE_HTTPS = (
     os.environ.get("REQUIRE_HTTPS", "false")
     .strip()
@@ -326,15 +367,31 @@ def cleanup_old_samples():
 
 
 def fetch_metrics():
-    response = requests.get(
-        ONT_URL,
-        timeout=REQUEST_TIMEOUT,
-        verify=False,
-        headers={
+    request_args = {
+        "timeout": REQUEST_TIMEOUT,
+        "verify": ONT_TLS_VERIFY,
+        "headers": {
             "User-Agent":
             "x-onu-dashboard/2.0"
         },
-    )
+    }
+
+    if ONT_TLS_VERIFY is False:
+        with warnings.catch_warnings():
+            warnings.simplefilter(
+                "ignore",
+                urllib3.exceptions.InsecureRequestWarning,
+            )
+
+            response = requests.get(
+                ONT_URL,
+                **request_args,
+            )
+    else:
+        response = requests.get(
+            ONT_URL,
+            **request_args,
+        )
 
     response.raise_for_status()
 
