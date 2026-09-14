@@ -214,6 +214,7 @@ class AlertManager:
 
         self._init_db()
         self._load_config()
+        self._load_runtime_state()
 
 
     def _connect_db(self):
@@ -255,6 +256,697 @@ class AlertManager:
                     config_json TEXT NOT NULL
                 )
             """)
+
+            con.execute("""
+                CREATE TABLE IF NOT EXISTS alert_runtime_state (
+                    id INTEGER PRIMARY KEY
+                        CHECK (id = 1),
+                    config_json TEXT NOT NULL,
+                    state_json TEXT NOT NULL
+                )
+            """)
+
+
+    @classmethod
+    def _encode_runtime_value(
+        cls,
+        value,
+    ):
+        if isinstance(value, tuple):
+            return {
+                "__runtime_type__": "tuple",
+                "items": [
+                    cls._encode_runtime_value(item)
+                    for item in value
+                ],
+            }
+
+        if isinstance(value, list):
+            return {
+                "__runtime_type__": "list",
+                "items": [
+                    cls._encode_runtime_value(item)
+                    for item in value
+                ],
+            }
+
+        if isinstance(value, dict):
+            return {
+                "__runtime_type__": "dict",
+                "items": [
+                    [
+                        cls._encode_runtime_value(key),
+                        cls._encode_runtime_value(item),
+                    ]
+                    for key, item in value.items()
+                ],
+            }
+
+        if (
+            value is None
+            or
+            isinstance(
+                value,
+                (
+                    bool,
+                    int,
+                    float,
+                    str,
+                ),
+            )
+        ):
+            return value
+
+        raise TypeError(
+            "Unsupported alert runtime state type: "
+            f"{type(value).__name__}"
+        )
+
+
+    @classmethod
+    def _decode_runtime_value(
+        cls,
+        value,
+    ):
+        if not isinstance(value, dict):
+            return value
+
+        if set(value) != {
+            "__runtime_type__",
+            "items",
+        }:
+            raise ValueError(
+                "Invalid alert runtime state object"
+            )
+
+        runtime_type = value[
+            "__runtime_type__"
+        ]
+
+        items = value["items"]
+
+        if not isinstance(items, list):
+            raise ValueError(
+                "Invalid alert runtime state items"
+            )
+
+        if runtime_type == "tuple":
+            return tuple(
+                cls._decode_runtime_value(item)
+                for item in items
+            )
+
+        if runtime_type == "list":
+            return [
+                cls._decode_runtime_value(item)
+                for item in items
+            ]
+
+        if runtime_type == "dict":
+            result = {}
+
+            for pair in items:
+                if (
+                    not isinstance(pair, list)
+                    or
+                    len(pair) != 2
+                ):
+                    raise ValueError(
+                        "Invalid alert runtime mapping entry"
+                    )
+
+                key = cls._decode_runtime_value(
+                    pair[0]
+                )
+
+                item = cls._decode_runtime_value(
+                    pair[1]
+                )
+
+                result[key] = item
+
+            return result
+
+        raise ValueError(
+            "Unknown alert runtime state type"
+        )
+
+
+    @staticmethod
+    def _is_runtime_number(
+        value,
+    ):
+        if isinstance(value, bool):
+            return False
+
+        if isinstance(value, int):
+            return True
+
+        return (
+            isinstance(value, float)
+            and
+            math.isfinite(value)
+        )
+
+
+    @classmethod
+    def _validate_runtime_state(
+        cls,
+        previous,
+        pending,
+        last_alert,
+    ):
+        quality_metrics = {
+            "rx_power_dBm",
+            "tx_power_dBm",
+            "temperature_max",
+        }
+
+        counter_metrics = {
+            rule["metric_name"]
+            for rule in ALERT_CONFIG["counters"]
+        }
+
+        counter_alert_types = {
+            rule["alert_type"]
+            for rule in ALERT_CONFIG["counters"]
+        }
+
+        def valid_quality_state_key(key):
+            return (
+                isinstance(key, tuple)
+                and
+                len(key) == 2
+                and
+                key[0] == "core_quality"
+                and
+                key[1] in quality_metrics
+            )
+
+        for key, value in previous.items():
+            if (
+                isinstance(key, tuple)
+                and
+                len(key) == 2
+                and
+                key[0] == "counter"
+                and
+                key[1] in counter_metrics
+            ):
+                if not cls._is_runtime_number(
+                    value
+                ):
+                    raise ValueError(
+                        "Invalid counter baseline"
+                    )
+
+                continue
+
+            if (
+                isinstance(key, tuple)
+                and
+                len(key) == 2
+                and
+                key[0] == "gem_key_errors"
+            ):
+                if (
+                    not isinstance(
+                        key[1],
+                        (int, str),
+                    )
+                    or
+                    isinstance(key[1], bool)
+                    or
+                    not cls._is_runtime_number(
+                        value
+                    )
+                ):
+                    raise ValueError(
+                        "Invalid GEM runtime state"
+                    )
+
+                continue
+
+            if key == (
+                "active_alarm_count",
+            ):
+                if not cls._is_runtime_number(
+                    value
+                ):
+                    raise ValueError(
+                        "Invalid active alarm state"
+                    )
+
+                continue
+
+            if key == (
+                "core_reachability",
+            ):
+                if not isinstance(
+                    value,
+                    bool,
+                ):
+                    raise ValueError(
+                        "Invalid reachability state"
+                    )
+
+                continue
+
+            if key == (
+                "ploam_operational",
+            ):
+                if (
+                    not isinstance(value, tuple)
+                    or
+                    len(value) != 2
+                    or
+                    not isinstance(
+                        value[0],
+                        bool,
+                    )
+                    or
+                    not isinstance(
+                        value[1],
+                        int,
+                    )
+                    or
+                    isinstance(value[1], bool)
+                ):
+                    raise ValueError(
+                        "Invalid PLOAM state"
+                    )
+
+                continue
+
+            if valid_quality_state_key(key):
+                if (
+                    not isinstance(value, tuple)
+                    or
+                    len(value) != 3
+                    or
+                    not isinstance(
+                        value[0],
+                        str,
+                    )
+                    or
+                    value[1]
+                    not in {
+                        "good",
+                        "warn",
+                        "bad",
+                    }
+                    or
+                    not cls._is_runtime_number(
+                        value[2]
+                    )
+                ):
+                    raise ValueError(
+                        "Invalid quality state"
+                    )
+
+                continue
+
+            if (
+                isinstance(key, tuple)
+                and
+                len(key) == 2
+                and
+                key[0] == "quality_active"
+                and
+                valid_quality_state_key(
+                    key[1]
+                )
+            ):
+                if value not in {
+                    "warn",
+                    "bad",
+                }:
+                    raise ValueError(
+                        "Invalid active quality state"
+                    )
+
+                continue
+
+            raise ValueError(
+                "Unknown previous runtime state"
+            )
+
+        for key, value in pending.items():
+            if (
+                isinstance(key, tuple)
+                and
+                len(key) == 2
+                and
+                key[0] == "counter"
+                and
+                key[1] in counter_metrics
+            ):
+                if (
+                    not isinstance(value, dict)
+                    or
+                    set(value) != {
+                        "previous_value",
+                        "delta",
+                    }
+                    or
+                    not cls._is_runtime_number(
+                        value["previous_value"]
+                    )
+                    or
+                    not cls._is_runtime_number(
+                        value["delta"]
+                    )
+                ):
+                    raise ValueError(
+                        "Invalid pending counter state"
+                    )
+
+                continue
+
+            if key == (
+                "core_reachability",
+            ):
+                if (
+                    not isinstance(value, dict)
+                    or
+                    set(value) != {
+                        "count",
+                    }
+                    or
+                    not isinstance(
+                        value["count"],
+                        int,
+                    )
+                    or
+                    isinstance(
+                        value["count"],
+                        bool,
+                    )
+                    or
+                    value["count"] < 1
+                ):
+                    raise ValueError(
+                        "Invalid pending reachability state"
+                    )
+
+                continue
+
+            if (
+                isinstance(key, tuple)
+                and
+                len(key) == 2
+                and
+                key[0] == "quality_pending"
+                and
+                valid_quality_state_key(
+                    key[1]
+                )
+            ):
+                if (
+                    not isinstance(value, dict)
+                    or
+                    set(value) != {
+                        "level",
+                        "count",
+                        "previous_text",
+                        "previous_value",
+                    }
+                    or
+                    value["level"] != "warn"
+                    or
+                    not isinstance(
+                        value["count"],
+                        int,
+                    )
+                    or
+                    isinstance(
+                        value["count"],
+                        bool,
+                    )
+                    or
+                    value["count"] < 1
+                    or
+                    not isinstance(
+                        value["previous_text"],
+                        str,
+                    )
+                    or
+                    not cls._is_runtime_number(
+                        value["previous_value"]
+                    )
+                ):
+                    raise ValueError(
+                        "Invalid pending quality state"
+                    )
+
+                continue
+
+            raise ValueError(
+                "Unknown pending runtime state"
+            )
+
+        for key, value in last_alert.items():
+            if (
+                not isinstance(key, tuple)
+                or
+                len(key) != 2
+                or
+                key[0] != "alert"
+                or
+                key[1]
+                not in counter_alert_types
+                or
+                not cls._is_runtime_number(
+                    value
+                )
+            ):
+                raise ValueError(
+                    "Invalid alert cooldown state"
+                )
+
+
+    @staticmethod
+    def _runtime_config_json(
+        config,
+    ):
+        return json.dumps(
+            config,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+
+
+    def _runtime_state_json_locked(
+        self,
+    ):
+        payload = {
+            "version": 1,
+            "previous":
+                self._encode_runtime_value(
+                    self.previous
+                ),
+            "pending":
+                self._encode_runtime_value(
+                    self.pending
+                ),
+            "last_alert":
+                self._encode_runtime_value(
+                    self.last_alert
+                ),
+        }
+
+        return json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+
+
+    def _persist_runtime_state_locked(
+        self,
+    ):
+        con = None
+
+        try:
+            config_json = (
+                self._runtime_config_json(
+                    ALERT_CONFIG
+                )
+            )
+
+            state_json = (
+                self._runtime_state_json_locked()
+            )
+
+            con = self._connect_db()
+
+            with con:
+                con.execute(
+                    """
+                    INSERT INTO alert_runtime_state (
+                        id,
+                        config_json,
+                        state_json
+                    )
+                    VALUES (1, ?, ?)
+                    ON CONFLICT(id)
+                    DO UPDATE SET
+                        config_json = excluded.config_json,
+                        state_json = excluded.state_json
+                    """,
+                    (
+                        config_json,
+                        state_json,
+                    ),
+                )
+
+        except (
+            sqlite3.Error,
+            TypeError,
+            ValueError,
+            OverflowError,
+        ) as exc:
+            print(
+                "Alert runtime state persistence "
+                f"failed: {exc}"
+            )
+
+        finally:
+            if con is not None:
+                con.close()
+
+
+    def _persist_runtime_state(
+        self,
+    ):
+        with self.lock:
+            self._persist_runtime_state_locked()
+
+
+    def _load_runtime_state(
+        self,
+    ):
+        con = None
+
+        try:
+            con = self._connect_db()
+
+            row = con.execute(
+                """
+                SELECT
+                    config_json,
+                    state_json
+                FROM alert_runtime_state
+                WHERE id = 1
+                """
+            ).fetchone()
+
+            if row is None:
+                return
+
+            current_config_json = (
+                self._runtime_config_json(
+                    ALERT_CONFIG
+                )
+            )
+
+            if (
+                row["config_json"]
+                !=
+                current_config_json
+            ):
+                return
+
+            payload = json.loads(
+                row["state_json"],
+                parse_constant=lambda value: (
+                    (_ for _ in ()).throw(
+                        ValueError(
+                            "Invalid JSON numeric constant"
+                        )
+                    )
+                ),
+            )
+
+            if (
+                not isinstance(payload, dict)
+                or
+                set(payload) != {
+                    "version",
+                    "previous",
+                    "pending",
+                    "last_alert",
+                }
+                or
+                payload["version"] != 1
+            ):
+                raise ValueError(
+                    "Unsupported alert runtime "
+                    "state payload"
+                )
+
+            previous = (
+                self._decode_runtime_value(
+                    payload["previous"]
+                )
+            )
+
+            pending = (
+                self._decode_runtime_value(
+                    payload["pending"]
+                )
+            )
+
+            last_alert = (
+                self._decode_runtime_value(
+                    payload["last_alert"]
+                )
+            )
+
+            if not all(
+                isinstance(item, dict)
+                for item in (
+                    previous,
+                    pending,
+                    last_alert,
+                )
+            ):
+                raise ValueError(
+                    "Invalid alert runtime "
+                    "state mappings"
+                )
+
+            self._validate_runtime_state(
+                previous,
+                pending,
+                last_alert,
+            )
+
+        except (
+            sqlite3.Error,
+            json.JSONDecodeError,
+            TypeError,
+            ValueError,
+            OverflowError,
+            RecursionError,
+        ) as exc:
+            print(
+                "Alert runtime state load "
+                f"failed: {exc}"
+            )
+
+            return
+
+        finally:
+            if con is not None:
+                con.close()
+
+        with self.lock:
+            self.previous = previous
+            self.pending = pending
+            self.last_alert = last_alert
 
 
     def validate_config(
@@ -1213,6 +1905,8 @@ class AlertManager:
                 previous_config,
                 config_copy,
             )
+
+            self._persist_runtime_state_locked()
 
         return self.get_config()
 
@@ -2782,6 +3476,8 @@ class AlertManager:
             metrics,
         )
 
+        self._persist_runtime_state()
+
 
     def process_core_unreachable(
         self,
@@ -2795,6 +3491,8 @@ class AlertManager:
             online=False,
             error=error,
         )
+
+        self._persist_runtime_state()
 
 
     def process_sample(
@@ -2839,6 +3537,8 @@ class AlertManager:
             ts,
             metrics,
         )
+
+        self._persist_runtime_state()
 
 
     def recent_events(
