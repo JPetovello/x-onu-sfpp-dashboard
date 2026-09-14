@@ -459,3 +459,28 @@ For changes involving collectors, alerts, retention, or notifications, test both
 X-ONU Dashboard is primarily developed and hardware-tested against the EXEN X-ONU-SFPP and compatible ONTs running 8311 community firmware.
 
 Compatibility changes for other hardware or firmware should avoid breaking behavior already validated on the project's primary supported platform.
+
+## Dependency Lock Maintenance
+
+Python dependency intent is recorded in `requirements.in`.
+
+Production container builds install only from `requirements.lock`, which
+contains the complete resolved dependency graph with SHA-256 hashes.
+The Docker build enforces both `--require-hashes` and
+`--only-binary=:all:`.
+
+Do not hand-edit `requirements.lock`.
+
+When dependencies are intentionally changed, regenerate the lock using
+`pip-tools==7.6.1`, then run:
+
+    pip-compile --generate-hashes --strip-extras \
+      --output-file=requirements.lock requirements.in
+
+After regenerating the lock, review every dependency version change, run
+the complete regression suites, build the Docker image, and verify binary
+wheel availability for every published architecture.
+
+The Docker base image and GitHub Actions are deliberately pinned to
+immutable digests or commit SHAs. Updating those pins must be an explicit,
+reviewed maintenance change rather than a floating-tag update.
