@@ -567,6 +567,29 @@ client-supplied forwarding headers such as `X-Forwarded-Proto`.
 Do not expose the dashboard application port directly to the Internet.
 Leave `REQUIRE_HTTPS` disabled for ordinary HTTP-only LAN deployments.
 
+### Optional Dashboard Authentication
+
+The dashboard can optionally require HTTP Basic authentication.
+
+Authentication is disabled by default for trusted-LAN deployments.
+
+To enable it, configure both:
+
+    DASHBOARD_AUTH_USERNAME=admin
+    DASHBOARD_AUTH_PASSWORD=use-a-strong-password
+
+Both variables must be configured together. If only one is supplied,
+the application refuses to start.
+
+HTTP Basic authentication must only be used over HTTPS on untrusted
+networks. Internet-facing deployments must still use a trusted HTTPS
+reverse proxy and must not expose the dashboard application port
+directly.
+
+Users with access to the Docker or Unraid host may be able to inspect
+container environment variables. Protect the dashboard authentication
+password with the same care as `SSH_PASSWORD`.
+
 ## Docker Image
 
 The published Docker image is:

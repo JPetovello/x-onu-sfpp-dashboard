@@ -1,3 +1,4 @@
+import hmac
 import math
 import os
 import sqlite3
@@ -7,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 import urllib3
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 
 from advanced import AdvancedCollector
 from retention import RetentionManager
@@ -33,7 +34,81 @@ REQUIRE_HTTPS = (
     in {"1", "true", "yes", "on"}
 )
 
+
+def load_dashboard_auth():
+    username = os.environ.get(
+        "DASHBOARD_AUTH_USERNAME",
+        "",
+    ).strip()
+
+    password = os.environ.get(
+        "DASHBOARD_AUTH_PASSWORD",
+        "",
+    )
+
+    if bool(username) != bool(password):
+        raise RuntimeError(
+            "DASHBOARD_AUTH_USERNAME and "
+            "DASHBOARD_AUTH_PASSWORD must either "
+            "both be configured or both be unset"
+        )
+
+    return username, password
+
+
+(
+    DASHBOARD_AUTH_USERNAME,
+    DASHBOARD_AUTH_PASSWORD,
+) = load_dashboard_auth()
+
+
 app = Flask(__name__, template_folder="web_templates")
+
+
+@app.before_request
+def require_dashboard_auth():
+    if request.path == "/api/health":
+        return None
+
+    if not (
+        DASHBOARD_AUTH_USERNAME
+        and DASHBOARD_AUTH_PASSWORD
+    ):
+        return None
+
+    auth = request.authorization
+
+    username_ok = False
+    password_ok = False
+
+    if (
+        auth is not None
+        and (auth.type or "").lower() == "basic"
+    ):
+        username_ok = hmac.compare_digest(
+            auth.username or "",
+            DASHBOARD_AUTH_USERNAME,
+        )
+
+        password_ok = hmac.compare_digest(
+            auth.password or "",
+            DASHBOARD_AUTH_PASSWORD,
+        )
+
+    if username_ok & password_ok:
+        return None
+
+    return Response(
+        "Authentication required\n",
+        status=401,
+        headers={
+            "WWW-Authenticate": (
+                'Basic realm="X-ONU-SFPP Dashboard", '
+                'charset="UTF-8"'
+            ),
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.after_request
