@@ -10,6 +10,7 @@ from tx_health import classify_tx_power
 
 
 CONFIG_VERSION = 3
+ALERT_HISTORY_MAX_OFFSET = 100_000
 
 TX_PROFILE_LEGACY = "legacy"
 TX_PROFILE_XGSPONST2001_A01 = (
@@ -3556,7 +3557,10 @@ class AlertManager:
 
         offset = max(
             0,
-            int(offset),
+            min(
+                int(offset),
+                ALERT_HISTORY_MAX_OFFSET,
+            ),
         )
 
         with self._connect_db() as con:
