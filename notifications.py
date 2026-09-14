@@ -2,6 +2,7 @@ import json
 import queue
 import sqlite3
 import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -39,6 +40,45 @@ NOTIFICATION_CONFIG = deepcopy(
     DEFAULT_NOTIFICATION_CONFIG
 )
 
+NOTIFICATION_QUEUE_MAXSIZE = 100
+NOTIFICATION_QUEUE_TTL_SECONDS = 30 * 60
+
+
+class LatestNotificationQueue(queue.Queue):
+    """Bounded FIFO queue that retains the newest notifications."""
+
+    def put_latest(
+        self,
+        item,
+    ):
+        """Insert without blocking, dropping the oldest item if full."""
+
+        dropped_oldest = False
+
+        # Queue.get() and Queue.put() use the same underlying
+        # mutex. Holding it here makes replacement atomic with
+        # respect to the notification worker.
+        with self.not_full:
+            if (
+                self.maxsize > 0
+                and
+                self._qsize() >= self.maxsize
+            ):
+                self._get()
+
+                self.unfinished_tasks -= 1
+
+                if self.unfinished_tasks == 0:
+                    self.all_tasks_done.notify_all()
+
+                dropped_oldest = True
+
+            self._put(item)
+            self.unfinished_tasks += 1
+            self.not_empty.notify()
+
+        return dropped_oldest
+
 
 class NotificationManager:
     """Deliver stored alert events to configured external providers.
@@ -51,7 +91,9 @@ class NotificationManager:
     def __init__(self, db_path):
         self.db_path = db_path
         self.lock = threading.Lock()
-        self.notification_queue = queue.Queue()
+        self.notification_queue = LatestNotificationQueue(
+            maxsize=NOTIFICATION_QUEUE_MAXSIZE
+        )
 
         self._init_db()
         self._load_config()
@@ -1056,33 +1098,70 @@ class NotificationManager:
             return
 
 
+    def _queued_notification_expired(
+        self,
+        queued,
+    ):
+        age = (
+            time.monotonic()
+            -
+            queued["queued_at"]
+        )
+
+        return (
+            age
+            >
+            NOTIFICATION_QUEUE_TTL_SECONDS
+        )
+
+
+    def _deliver_queued_notification(
+        self,
+        queued,
+    ):
+        """Deliver one queued notification unless it has become stale."""
+
+        if self._queued_notification_expired(
+            queued
+        ):
+            return False
+
+        event = queued["event"]
+
+        self._send_discord(
+            event
+        )
+
+        self._send_pushover(
+            event
+        )
+
+        self._send_gotify(
+            event
+        )
+
+        self._send_ntfy(
+            event
+        )
+
+        self._send_webhook(
+            event
+        )
+
+        return True
+
+
     def _notification_worker(
         self,
     ):
-        """Dispatch queued events to each notification provider."""
+        """Dispatch pending notifications without blocking alert storage."""
 
         while True:
-            event = self.notification_queue.get()
+            queued = self.notification_queue.get()
 
             try:
-                self._send_discord(
-                    event
-                )
-
-                self._send_pushover(
-                    event
-                )
-
-                self._send_gotify(
-                    event
-                )
-
-                self._send_ntfy(
-                    event
-                )
-
-                self._send_webhook(
-                    event
+                self._deliver_queued_notification(
+                    queued
                 )
 
             except Exception as exc:
@@ -1107,6 +1186,19 @@ class NotificationManager:
         Notification delivery remains asynchronous
         and cannot block alert collection or storage.
         """
-        self.notification_queue.put(
-            deepcopy(event)
+        queued = {
+            "queued_at": time.monotonic(),
+            "event": deepcopy(event),
+        }
+
+        dropped_oldest = (
+            self.notification_queue.put_latest(
+                queued
+            )
         )
+
+        if dropped_oldest:
+            print(
+                "Notification queue full; oldest "
+                "queued notification was dropped"
+            )
