@@ -546,6 +546,27 @@ The Docker host must be able to reach the management IP of the ONT.
 
 For advanced monitoring, SSH access to the ONT is also required.
 
+### Internet-Facing HTTPS
+
+The dashboard can be used over plain HTTP on a trusted local network by
+default.
+
+Internet-facing deployments should be placed behind a trusted HTTPS reverse
+proxy and configured with:
+
+    REQUIRE_HTTPS=true
+
+When `REQUIRE_HTTPS` is enabled, the dashboard sends:
+
+    Strict-Transport-Security: max-age=31536000
+
+The reverse proxy is responsible for terminating TLS and redirecting or
+rejecting plain HTTP traffic. The dashboard does not automatically trust
+client-supplied forwarding headers such as `X-Forwarded-Proto`.
+
+Do not expose the dashboard application port directly to the Internet.
+Leave `REQUIRE_HTTPS` disabled for ordinary HTTP-only LAN deployments.
+
 ## Docker Image
 
 The published Docker image is:

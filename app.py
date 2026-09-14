@@ -26,8 +26,43 @@ ONT_URL = os.environ.get(
 POLL_SECONDS = max(2, int(os.environ.get("POLL_SECONDS", "10")))
 RETENTION_DAYS = max(1, int(os.environ.get("RETENTION_DAYS", "30")))
 REQUEST_TIMEOUT = max(1, int(os.environ.get("REQUEST_TIMEOUT", "5")))
+REQUIRE_HTTPS = (
+    os.environ.get("REQUIRE_HTTPS", "false")
+    .strip()
+    .lower()
+    in {"1", "true", "yes", "on"}
+)
 
 app = Flask(__name__, template_folder="web_templates")
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self'; "
+        "img-src 'self'; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'; "
+        "form-action 'self'"
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=()"
+    )
+
+    if REQUIRE_HTTPS:
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000"
+        )
+
+    return response
+
 
 start_time = time.time()
 
