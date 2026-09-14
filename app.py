@@ -343,8 +343,11 @@ def collector_loop():
         ):
             try:
                 cleanup_old_samples()
-            except Exception:
-                pass
+            except Exception as exc:
+                print(
+                    "Retention cleanup failed: "
+                    f"{type(exc).__name__}: {exc}"
+                )
 
             cleanup_counter = 0
 

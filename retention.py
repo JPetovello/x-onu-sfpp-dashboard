@@ -132,15 +132,59 @@ class RetentionManager:
 
         defaults = self._default_config()
 
+        if not isinstance(config, dict):
+            return defaults
+
+        telemetry_days = config.get(
+            "telemetry_days",
+            defaults["telemetry_days"],
+        )
+
+        telemetry_days_valid = (
+            telemetry_days is None
+            or (
+                isinstance(telemetry_days, int)
+                and not isinstance(telemetry_days, bool)
+                and telemetry_days > 0
+            )
+        )
+
+        if (
+            telemetry_days_valid
+            and telemetry_days is not None
+        ):
+            try:
+                datetime.now(timezone.utc) - timedelta(
+                    days=telemetry_days
+                )
+            except (OverflowError, ValueError):
+                telemetry_days_valid = False
+
+        if not telemetry_days_valid:
+            telemetry_days = defaults[
+                "telemetry_days"
+            ]
+
+        alert_days = config.get(
+            "alert_days",
+            defaults["alert_days"],
+        )
+
+        if (
+            alert_days is not None
+            and (
+                isinstance(alert_days, bool)
+                or not isinstance(alert_days, int)
+                or alert_days not in ALERT_RETENTION_OPTIONS
+            )
+        ):
+            alert_days = defaults[
+                "alert_days"
+            ]
+
         return {
-            "telemetry_days": config.get(
-                "telemetry_days",
-                defaults["telemetry_days"],
-            ),
-            "alert_days": config.get(
-                "alert_days",
-                defaults["alert_days"],
-            ),
+            "telemetry_days": telemetry_days,
+            "alert_days": alert_days,
         }
 
     @staticmethod
