@@ -1,6 +1,5 @@
 .git
 .github
-templates
 *.db
 *.sqlite
 *.sqlite3
@@ -9,7 +8,6 @@ __pycache__
 .env
 README.md
 LICENSE
-ca_profile.xml
 tests/
 DEVELOPMENT.md
 requirements.in
