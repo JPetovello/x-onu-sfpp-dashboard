@@ -1522,10 +1522,53 @@ pontop -b -g 'Optical Interface Info'
             delta
         ).isoformat()
 
+        max_points = 900
+
         with self._connect_db() as con:
+
+            row_count = con.execute(
+                """
+                SELECT COUNT(*)
+                FROM advanced_samples
+                WHERE ts >= ?
+                """,
+                (
+                    cutoff,
+                ),
+            ).fetchone()[0]
+
+            step = max(
+                1,
+                row_count
+                //
+                max_points,
+            )
 
             rows = con.execute("""
                 SELECT
+                ts,
+                gem_id,
+                upload_bps,
+                download_bps,
+                key_errors,
+                bip_errors,
+                corrected_fec_codewords,
+                uncorrected_fec_codewords,
+                fec_errored_seconds,
+                psbd_hec_uncorrected,
+                fs_hec_uncorrected,
+                ploam_mic_errors,
+                active_alarm_count,
+                ont_uptime_seconds,
+                load_1m,
+                load_5m,
+                load_15m,
+                memory_total_kb,
+                memory_used_kb,
+                memory_available_kb
+                FROM (
+                    SELECT
+                        rowid AS sample_rowid,
                     ts,
                     gem_id,
                     upload_bps,
@@ -1545,27 +1588,24 @@ pontop -b -g 'Optical Interface Info'
                     load_15m,
                     memory_total_kb,
                     memory_used_kb,
-                    memory_available_kb
-                FROM advanced_samples
-                WHERE ts >= ?
-                ORDER BY ts ASC
+                    memory_available_kb,
+                        ROW_NUMBER() OVER (
+                            ORDER BY ts ASC, rowid ASC
+                        ) AS sample_number
+                    FROM advanced_samples
+                    WHERE ts >= ?
+                )
+                WHERE ((sample_number - 1) % ?) = 0
+                ORDER BY sample_number ASC
             """, (
                 cutoff,
+                step,
             )).fetchall()
-
-        max_points = 900
-
-        step = max(
-            1,
-            len(rows)
-            //
-            max_points,
-        )
 
         return [
             dict(row)
             for row
-            in rows[::step]
+            in rows
         ]
 
 

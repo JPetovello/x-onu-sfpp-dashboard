@@ -421,7 +421,23 @@ def api_history():
         - delta
     ).isoformat()
 
+    max_points = 900
+
     with db_connect() as con:
+
+        row_count = con.execute(
+            """
+            SELECT COUNT(*)
+            FROM samples
+            WHERE ts >= ?
+            """,
+            (cutoff,),
+        ).fetchone()[0]
+
+        step = max(
+            1,
+            row_count // max_points
+        )
 
         rows = con.execute("""
             SELECT
@@ -434,22 +450,35 @@ def api_history():
                 rx_power_dBm,
                 tx_bias_mA,
                 tx_power_dBm
-            FROM samples
-            WHERE ts >= ?
-            ORDER BY ts ASC
-        """, (cutoff,)).fetchall()
-
-    max_points = 900
-
-    step = max(
-        1,
-        len(rows) // max_points
-    )
+            FROM (
+                SELECT
+                    rowid AS sample_rowid,
+                    ts,
+                    cpu1_tempC,
+                    cpu2_tempC,
+                    module_voltage,
+                    optic_tempC,
+                    ploam_state,
+                    rx_power_dBm,
+                    tx_bias_mA,
+                    tx_power_dBm,
+                    ROW_NUMBER() OVER (
+                        ORDER BY ts ASC, rowid ASC
+                    ) AS sample_number
+                FROM samples
+                WHERE ts >= ?
+            )
+            WHERE ((sample_number - 1) % ?) = 0
+            ORDER BY sample_number ASC
+        """, (
+            cutoff,
+            step,
+        )).fetchall()
 
     return jsonify(
         json_safe_telemetry([
             dict(r)
-            for r in rows[::step]
+            for r in rows
         ])
     )
 
