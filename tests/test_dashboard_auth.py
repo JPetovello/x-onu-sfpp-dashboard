@@ -102,7 +102,11 @@ class DashboardAuthTests(unittest.TestCase):
         ):
             response = self.client.get("/api/health")
 
-        self.assertNotEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {"status": "healthy"},
+        )
 
     def test_partial_auth_configuration_is_rejected(self):
         with unittest.mock.patch.dict(

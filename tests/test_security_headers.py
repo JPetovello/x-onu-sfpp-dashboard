@@ -50,6 +50,12 @@ class SecurityHeaderTests(unittest.TestCase):
     def test_api_response_has_security_headers(self):
         response = self.client.get("/api/health")
 
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {"status": "healthy"},
+        )
+
         self.assertEqual(
             response.headers["X-Content-Type-Options"],
             "nosniff",

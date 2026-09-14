@@ -524,6 +524,11 @@ def alert_history():
     )
 
 
+@app.route("/api/health")
+def api_health():
+    return {"status": "healthy"}
+
+
 @app.route("/api/current")
 def api_current():
 
