@@ -1,3 +1,4 @@
+import math
 import os
 import sqlite3
 import threading
@@ -66,6 +67,28 @@ def utc_now_iso():
 
 
 
+def json_safe_telemetry(value):
+    """Replace non-finite floats before telemetry reaches jsonify()."""
+
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+
+    if isinstance(value, dict):
+        return {
+            key: json_safe_telemetry(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, (list, tuple)):
+        return [
+            json_safe_telemetry(item)
+            for item in value
+        ]
+
+    return value
+
+
+
 def db_connect():
     os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -114,12 +137,48 @@ def normalize_metrics(payload):
             result[key] = None
 
         elif key == "ploam_state":
-            result[key] = int(value)
+            numeric_value = float(value)
+
+            if not math.isfinite(numeric_value):
+                result[key] = None
+            else:
+                result[key] = int(value)
 
         else:
-            result[key] = float(value)
+            numeric_value = float(value)
+
+            result[key] = (
+                numeric_value
+                if math.isfinite(numeric_value)
+                else None
+            )
 
     return result
+
+
+
+def core_error_summary(exc):
+    """Return a bounded diagnostic safe for persistence and display."""
+
+    if isinstance(exc, requests.Timeout):
+        return "Core telemetry request timed out"
+
+    if isinstance(exc, requests.HTTPError):
+        return "Core telemetry endpoint returned an HTTP error"
+
+    if isinstance(exc, requests.JSONDecodeError):
+        return "Core telemetry endpoint returned invalid JSON"
+
+    if isinstance(exc, (TypeError, ValueError, OverflowError)):
+        return "Core telemetry contained an invalid value"
+
+    if isinstance(exc, requests.RequestException):
+        return "Core telemetry request failed"
+
+    return (
+        "Core telemetry collection failed "
+        f"({type(exc).__name__})"
+    )
 
 
 
@@ -196,9 +255,7 @@ def collector_loop():
         except Exception as exc:
             ts = utc_now_iso()
 
-            error = (
-                f"{type(exc).__name__}: {exc}"
-            )
+            error = core_error_summary(exc)
 
             with state_lock:
                 state["online"] = False
@@ -330,7 +387,9 @@ def api_current():
         time.time() - start_time
     )
 
-    return jsonify(snapshot)
+    return jsonify(
+        json_safe_telemetry(snapshot)
+    )
 
 
 
@@ -388,10 +447,10 @@ def api_history():
     )
 
     return jsonify(
-        [
+        json_safe_telemetry([
             dict(r)
             for r in rows[::step]
-        ]
+        ])
     )
 
 
@@ -457,7 +516,7 @@ def api_stats():
         """, (cutoff,)).fetchone()
 
     return jsonify(
-        dict(row)
+        json_safe_telemetry(dict(row))
     )
 
 
@@ -491,7 +550,9 @@ def api_info():
 def api_advanced_current():
 
     return jsonify(
-        advanced_collector.snapshot()
+        json_safe_telemetry(
+            advanced_collector.snapshot()
+        )
     )
 
 
@@ -505,8 +566,10 @@ def api_advanced_history():
     )
 
     return jsonify(
-        advanced_collector.history(
-            range_name
+        json_safe_telemetry(
+            advanced_collector.history(
+                range_name
+            )
         )
     )
 
@@ -521,8 +584,10 @@ def api_advanced_stats():
     )
 
     return jsonify(
-        advanced_collector.stats(
-            range_name
+        json_safe_telemetry(
+            advanced_collector.stats(
+                range_name
+            )
         )
     )
 

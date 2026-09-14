@@ -358,6 +358,46 @@ function txStatus(
 }
 
 
+function configuredPloamOperationalState() {
+    const configured = (
+        alertConfig &&
+        alertConfig.ploam &&
+        alertConfig.ploam.operational_state
+    );
+
+    return Number.isInteger(configured)
+        ? configured
+        : 51;
+}
+
+
+function normalizedPloamState(value) {
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+        return null;
+    }
+
+    const numericValue = Number(value);
+
+    return Number.isInteger(numericValue)
+        ? numericValue
+        : null;
+}
+
+
+function isPloamOperational(value) {
+    const current = normalizedPloamState(value);
+
+    return (
+        current !== null &&
+        current === configuredPloamOperationalState()
+    );
+}
+
+
 function thermalStatus(
     optic,
     cpu1,
@@ -593,24 +633,32 @@ function updateCoreDisplay(
     );
 
 
-    const ploam =
-        Number(
-            metrics.ploam_state
-        );
+    const ploam = normalizedPloamState(
+        metrics.ploam_state
+    );
 
     if (
-        ploam === 51
+        isPloamOperational(ploam)
     ) {
         setHealthBadge(
             "summaryPon",
-            "O5.1 ASSOCIATED",
+            ploam === 51
+                ? "O5.1 ASSOCIATED"
+                : (
+                    data.ploam_label ||
+                    `STATE ${ploam}`
+                ),
             "good"
         );
     } else {
         setHealthBadge(
             "summaryPon",
             data.ploam_label ||
-            `STATE ${ploam}`,
+            (
+                ploam === null
+                    ? "UNKNOWN"
+                    : `STATE ${ploam}`
+            ),
             "bad"
         );
     }
@@ -1159,11 +1207,9 @@ function overallHealthState() {
         {};
 
 
-    if (
-        Number(
-            coreMetrics.ploam_state
-        ) !== 51
-    ) {
+    if (!isPloamOperational(
+        coreMetrics.ploam_state
+    )) {
         return [
             "NOT OPERATIONAL",
             "bad"

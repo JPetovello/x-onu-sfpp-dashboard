@@ -507,5 +507,54 @@ class Xgsponst2001SpecAlertTests(unittest.TestCase):
         self.assertEqual(self.events, [])
 
 
+class PloamOperationalStateTests(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        db_path = str(
+            Path(self.tempdir.name) / "metrics.db"
+        )
+        self.manager = AlertManager(db_path)
+        self.events = []
+        self.manager._record_event = (
+            lambda **event: self.events.append(event)
+        )
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def configure_operational_state(self, state):
+        config = deepcopy(DEFAULT_ALERT_CONFIG)
+        config["ploam"]["operational_state"] = state
+        self.manager.save_config(config)
+
+    def sample(self, state):
+        self.manager._process_ploam_state(
+            "2026-09-14T00:00:00+00:00",
+            {"ploam_state": state},
+        )
+
+    def test_default_state_51_is_operational(self):
+        self.sample(51)
+        self.assertEqual(self.events, [])
+
+        self.sample(40)
+        self.assertEqual(
+            self.events[-1]["alert_type"],
+            "ploam_not_operational",
+        )
+
+    def test_configured_non_51_state_is_operational(self):
+        self.configure_operational_state(40)
+
+        self.sample(40)
+        self.assertEqual(self.events, [])
+
+        self.sample(51)
+        self.assertEqual(
+            self.events[-1]["alert_type"],
+            "ploam_not_operational",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

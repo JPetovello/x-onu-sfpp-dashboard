@@ -42,32 +42,60 @@ function renderAlertHistory(events) {
         return;
     }
 
-    list.innerHTML = events
-        .map((event) => {
-            const severity =
-                event.severity || "warning";
+    const rows = events.map((event) => {
+        const allowedSeverities = new Set([
+            "info",
+            "warning",
+            "critical",
+        ]);
 
-            return `
-                <article class="alert-row ${severity}">
-                    <div class="alert-main">
+        const candidateSeverity = String(
+            event?.severity || "warning"
+        ).toLowerCase();
 
-                        <span class="alert-severity">
-                            ${severity.toUpperCase()}
-                        </span>
+        const severity = allowedSeverities.has(
+            candidateSeverity
+        )
+            ? candidateSeverity
+            : "warning";
 
-                        <strong class="alert-message">
-                            ${event.message || "Alert"}
-                        </strong>
+        const article = document.createElement(
+            "article"
+        );
+        article.className = `alert-row ${severity}`;
 
-                        <span class="alert-time">
-                            ${formatHistoryAlertTime(event.ts)}
-                        </span>
+        const main = document.createElement("div");
+        main.className = "alert-main";
 
-                    </div>
-                </article>
-            `;
-        })
-        .join("");
+        const severityElement = document.createElement(
+            "span"
+        );
+        severityElement.className = "alert-severity";
+        severityElement.textContent = severity.toUpperCase();
+
+        const message = document.createElement("strong");
+        message.className = "alert-message";
+        message.textContent = String(
+            event?.message || "Alert"
+        );
+
+        const time = document.createElement("span");
+        time.className = "alert-time";
+        time.textContent = String(
+            formatHistoryAlertTime(event?.ts)
+        );
+
+        main.append(
+            severityElement,
+            message,
+            time
+        );
+        article.append(main);
+
+        return article;
+    });
+
+    list.replaceChildren(...rows);
 }
 
 

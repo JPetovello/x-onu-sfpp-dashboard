@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import sqlite3
@@ -226,9 +227,14 @@ class AdvancedCollector:
     def _safe_float(value):
 
         try:
-            return float(
+            numeric_value = float(
                 str(value).strip()
             )
+
+            if not math.isfinite(numeric_value):
+                return None
+
+            return numeric_value
 
         except (
             TypeError,
