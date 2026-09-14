@@ -470,6 +470,24 @@ Anyone who knows or discovers an unauthenticated topic name may be able to subsc
 
 For stronger access control, use an authenticated ntfy configuration or a self-hosted ntfy server and configure an access token when required.
 
+### Private Notification Destinations
+
+Gotify, ntfy, and Generic Webhook destinations are restricted to publicly
+routable IP addresses by default to protect against SSRF.
+
+Private or self-hosted destinations must be explicitly allowed by the
+administrator with `NOTIFICATION_PRIVATE_ORIGINS`, using a comma-separated
+list of exact origins:
+
+    NOTIFICATION_PRIVATE_ORIGINS=http://gotify.example.lan:8080,https://ntfy.example.lan
+
+Origins are matched by exact scheme, host, and port. Paths and query strings
+are not allowed. DNS addresses are validated before connecting, connections
+are pinned to validated addresses, redirects are not followed, and
+URL-embedded credentials are rejected.
+
+Leave `NOTIFICATION_PRIVATE_ORIGINS` unset when all destinations are public.
+
 ### Notification Credential Security
 
 Discord webhook URLs, Gotify application tokens, Pushover credentials, ntfy access tokens, and private Generic Webhook URLs should be treated as sensitive configuration.

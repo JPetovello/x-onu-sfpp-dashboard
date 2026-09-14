@@ -1,5 +1,9 @@
+import http.client
+import ipaddress
 import json
+import os
 import queue
+import socket
 import sqlite3
 import threading
 import time
@@ -42,6 +46,97 @@ NOTIFICATION_CONFIG = deepcopy(
 
 NOTIFICATION_QUEUE_MAXSIZE = 100
 NOTIFICATION_QUEUE_TTL_SECONDS = 30 * 60
+NOTIFICATION_REQUEST_TIMEOUT_SECONDS = 10
+NOTIFICATION_PRIVATE_ORIGINS_ENV = (
+    "NOTIFICATION_PRIVATE_ORIGINS"
+)
+
+
+def _connect_pinned_socket(
+    family,
+    sockaddr,
+    timeout,
+):
+    sock = socket.socket(
+        family,
+        socket.SOCK_STREAM,
+    )
+
+    try:
+        sock.settimeout(timeout)
+        sock.connect(sockaddr)
+
+    except BaseException:
+        sock.close()
+        raise
+
+    return sock
+
+
+class _PinnedHTTPConnection(
+    http.client.HTTPConnection
+):
+    def __init__(
+        self,
+        host,
+        port,
+        family,
+        sockaddr,
+        timeout,
+    ):
+        super().__init__(
+            host,
+            port=port,
+            timeout=timeout,
+        )
+
+        self._pinned_family = family
+        self._pinned_sockaddr = sockaddr
+
+    def connect(self):
+        self.sock = _connect_pinned_socket(
+            self._pinned_family,
+            self._pinned_sockaddr,
+            self.timeout,
+        )
+
+
+class _PinnedHTTPSConnection(
+    http.client.HTTPSConnection
+):
+    def __init__(
+        self,
+        host,
+        port,
+        family,
+        sockaddr,
+        timeout,
+    ):
+        super().__init__(
+            host,
+            port=port,
+            timeout=timeout,
+        )
+
+        self._pinned_family = family
+        self._pinned_sockaddr = sockaddr
+
+    def connect(self):
+        sock = _connect_pinned_socket(
+            self._pinned_family,
+            self._pinned_sockaddr,
+            self.timeout,
+        )
+
+        try:
+            self.sock = self._context.wrap_socket(
+                sock,
+                server_hostname=self.host,
+            )
+
+        except BaseException:
+            sock.close()
+            raise
 
 
 class LatestNotificationQueue(queue.Queue):
@@ -91,6 +186,9 @@ class NotificationManager:
     def __init__(self, db_path):
         self.db_path = db_path
         self.lock = threading.Lock()
+        self.private_notification_origins = (
+            self._load_private_notification_origins()
+        )
         self.notification_queue = LatestNotificationQueue(
             maxsize=NOTIFICATION_QUEUE_MAXSIZE
         )
@@ -104,6 +202,393 @@ class NotificationManager:
         )
 
         self.notification_worker.start()
+
+
+    @staticmethod
+    def _parse_notification_url(
+        url,
+    ):
+        if not isinstance(url, str):
+            raise ValueError(
+                "Notification URL must be a string"
+            )
+
+        url = url.strip()
+
+        if not url:
+            raise ValueError(
+                "Notification URL must not be empty"
+            )
+
+        if any(
+            ord(char) < 0x20
+            or ord(char) == 0x7f
+            for char in url
+        ):
+            raise ValueError(
+                "Notification URL contains "
+                "invalid control characters"
+            )
+
+        try:
+            parsed = urllib.parse.urlsplit(url)
+        except ValueError as exc:
+            raise ValueError(
+                "Notification URL is invalid"
+            ) from exc
+
+        scheme = parsed.scheme.lower()
+
+        if scheme not in {
+            "http",
+            "https",
+        }:
+            raise ValueError(
+                "Notification URL must use "
+                "http:// or https://"
+            )
+
+        if (
+            parsed.username is not None
+            or parsed.password is not None
+        ):
+            raise ValueError(
+                "Notification URL must not "
+                "contain credentials"
+            )
+
+        try:
+            host = parsed.hostname
+            port = parsed.port
+        except ValueError as exc:
+            raise ValueError(
+                "Notification URL has an invalid port"
+            ) from exc
+
+        if not host:
+            raise ValueError(
+                "Notification URL must contain a host"
+            )
+
+        if parsed.fragment:
+            raise ValueError(
+                "Notification URL must not "
+                "contain a fragment"
+            )
+
+        host = host.rstrip(".")
+
+        if not host:
+            raise ValueError(
+                "Notification URL must contain a host"
+            )
+
+        try:
+            ip_value = ipaddress.ip_address(host)
+        except ValueError:
+            try:
+                host = (
+                    host.encode("idna")
+                    .decode("ascii")
+                    .lower()
+                )
+            except UnicodeError as exc:
+                raise ValueError(
+                    "Notification URL has an invalid host"
+                ) from exc
+        else:
+            host = ip_value.compressed
+
+        default_port = (
+            443
+            if scheme == "https"
+            else 80
+        )
+
+        if port is None:
+            port = default_port
+
+        path = parsed.path or "/"
+        target = path
+
+        if parsed.query:
+            target += (
+                "?"
+                + parsed.query
+            )
+
+        try:
+            host_ip = ipaddress.ip_address(host)
+        except ValueError:
+            host_display = host
+        else:
+            if isinstance(
+                host_ip,
+                ipaddress.IPv6Address,
+            ):
+                host_display = (
+                    f"[{host}]"
+                )
+            else:
+                host_display = host
+
+        host_header = host_display
+
+        if port != default_port:
+            host_header = (
+                f"{host_display}:{port}"
+            )
+
+        return {
+            "scheme": scheme,
+            "host": host,
+            "port": port,
+            "path": parsed.path,
+            "query": parsed.query,
+            "target": target,
+            "host_header": host_header,
+            "origin": (
+                scheme,
+                host,
+                port,
+            ),
+        }
+
+
+    def _load_private_notification_origins(
+        self,
+    ):
+        raw = os.environ.get(
+            NOTIFICATION_PRIVATE_ORIGINS_ENV,
+            "",
+        )
+
+        origins = set()
+
+        for entry in raw.split(","):
+            entry = entry.strip()
+
+            if not entry:
+                continue
+
+            try:
+                parsed = self._parse_notification_url(
+                    entry
+                )
+
+                if (
+                    parsed["path"]
+                    not in {
+                        "",
+                        "/",
+                    }
+                    or parsed["query"]
+                ):
+                    raise ValueError(
+                        "allowlist entries must be origins"
+                    )
+
+                origins.add(
+                    parsed["origin"]
+                )
+
+            except ValueError as exc:
+                print(
+                    "Ignoring invalid "
+                    f"{NOTIFICATION_PRIVATE_ORIGINS_ENV} "
+                    f"entry: {exc}"
+                )
+
+        return origins
+
+
+    @staticmethod
+    def _notification_address_is_public(
+        address,
+    ):
+        if (
+            isinstance(
+                address,
+                ipaddress.IPv6Address,
+            )
+            and
+            address.ipv4_mapped is not None
+        ):
+            address = address.ipv4_mapped
+
+        return (
+            address.is_global
+            and not address.is_loopback
+            and not address.is_private
+            and not address.is_link_local
+            and not address.is_multicast
+            and not address.is_unspecified
+            and not address.is_reserved
+        )
+
+
+    def _resolve_notification_destination(
+        self,
+        url,
+    ):
+        destination = (
+            self._parse_notification_url(url)
+        )
+
+        allow_non_public = (
+            destination["origin"]
+            in self.private_notification_origins
+        )
+
+        try:
+            addresses = socket.getaddrinfo(
+                destination["host"],
+                destination["port"],
+                type=socket.SOCK_STREAM,
+                proto=socket.IPPROTO_TCP,
+            )
+
+        except socket.gaierror as exc:
+            raise ValueError(
+                "Notification destination "
+                "could not be resolved"
+            ) from exc
+
+        endpoints = []
+        seen = set()
+
+        for (
+            family,
+            _socktype,
+            _proto,
+            _canonname,
+            sockaddr,
+        ) in addresses:
+            if family not in {
+                socket.AF_INET,
+                socket.AF_INET6,
+            }:
+                continue
+
+            address_text = (
+                sockaddr[0]
+                .split("%", 1)[0]
+            )
+
+            try:
+                address = ipaddress.ip_address(
+                    address_text
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    "Notification destination "
+                    "resolved to an invalid address"
+                ) from exc
+
+            if (
+                not allow_non_public
+                and not self._notification_address_is_public(
+                    address
+                )
+            ):
+                raise ValueError(
+                    "Notification destination "
+                    "must resolve only to public "
+                    "IP addresses"
+                )
+
+            identity = (
+                family,
+                sockaddr,
+            )
+
+            if identity in seen:
+                continue
+
+            seen.add(identity)
+            endpoints.append(identity)
+
+        if not endpoints:
+            raise ValueError(
+                "Notification destination "
+                "has no usable IP address"
+            )
+
+        destination["endpoints"] = endpoints
+
+        return destination
+
+
+    def _post_notification_url(
+        self,
+        url,
+        payload,
+        headers,
+    ):
+        destination = (
+            self._resolve_notification_destination(
+                url
+            )
+        )
+
+        last_error = None
+
+        for family, sockaddr in (
+            destination["endpoints"]
+        ):
+            if destination["scheme"] == "https":
+                connection = _PinnedHTTPSConnection(
+                    destination["host"],
+                    destination["port"],
+                    family,
+                    sockaddr,
+                    NOTIFICATION_REQUEST_TIMEOUT_SECONDS,
+                )
+            else:
+                connection = _PinnedHTTPConnection(
+                    destination["host"],
+                    destination["port"],
+                    family,
+                    sockaddr,
+                    NOTIFICATION_REQUEST_TIMEOUT_SECONDS,
+                )
+
+            request_headers = dict(headers)
+            request_headers["Host"] = (
+                destination["host_header"]
+            )
+
+            try:
+                connection.request(
+                    "POST",
+                    destination["target"],
+                    body=payload,
+                    headers=request_headers,
+                )
+
+                response = connection.getresponse()
+                status = response.status
+                response.read()
+
+                return status
+
+            except (
+                http.client.HTTPException,
+                TimeoutError,
+                OSError,
+            ) as exc:
+                last_error = exc
+
+            finally:
+                connection.close()
+
+        if last_error is not None:
+            raise last_error
+
+        raise OSError(
+            "Notification destination "
+            "could not be reached"
+        )
 
 
     def _connect_db(self):
@@ -265,15 +750,9 @@ class NotificationManager:
                 "when Webhook notifications are enabled"
             )
 
-        if (
-            webhook["url"].strip()
-            and not webhook["url"].strip().startswith(
-                ("http://", "https://")
-            )
-        ):
-            raise ValueError(
-                "webhook.url must start with "
-                "http:// or https://"
+        if webhook["url"].strip():
+            self._parse_notification_url(
+                webhook["url"]
             )
 
         pushover = config["pushover"]
@@ -317,20 +796,9 @@ class NotificationManager:
                 "when Gotify notifications are enabled"
             )
 
-        if (
-            gotify["server_url"]
-            and not (
-                gotify["server_url"].startswith(
-                    "http://"
-                )
-                or gotify["server_url"].startswith(
-                    "https://"
-                )
-            )
-        ):
-            raise ValueError(
-                "gotify.server_url must start with "
-                "http:// or https://"
+        if gotify["server_url"].strip():
+            self._parse_notification_url(
+                gotify["server_url"]
             )
 
 
@@ -377,20 +845,9 @@ class NotificationManager:
                 "when ntfy notifications are enabled"
             )
 
-        if (
-            ntfy["server_url"]
-            and not (
-                ntfy["server_url"].startswith(
-                    "http://"
-                )
-                or ntfy["server_url"].startswith(
-                    "https://"
-                )
-            )
-        ):
-            raise ValueError(
-                "ntfy.server_url must start with "
-                "http:// or https://"
+        if ntfy["server_url"].strip():
+            self._parse_notification_url(
+                ntfy["server_url"]
             )
 
 
@@ -744,32 +1201,29 @@ class NotificationManager:
                 event,
         }).encode("utf-8")
 
-        request = urllib.request.Request(
-            url,
-            data=payload,
-            headers={
-                "Content-Type":
-                    "application/json",
-                "User-Agent":
-                    "X-ONU-SFPP-Dashboard",
-            },
-            method="POST",
-        )
+        headers = {
+            "Content-Type":
+                "application/json",
+            "User-Agent":
+                "X-ONU-SFPP-Dashboard",
+        }
 
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=10,
-            ) as response:
-                response.read()
+            self._post_notification_url(
+                url,
+                payload,
+                headers,
+            )
 
         except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
+            ValueError,
+            UnicodeError,
+            http.client.HTTPException,
             TimeoutError,
             OSError,
         ):
             return
+
 
 
     def _send_pushover(
@@ -951,32 +1405,29 @@ class NotificationManager:
                 priority,
         }).encode("utf-8")
 
-        request = urllib.request.Request(
-            url,
-            data=payload,
-            headers={
-                "Content-Type":
-                    "application/json",
-                "User-Agent":
-                    "X-ONU-SFPP-Dashboard",
-            },
-            method="POST",
-        )
+        headers = {
+            "Content-Type":
+                "application/json",
+            "User-Agent":
+                "X-ONU-SFPP-Dashboard",
+        }
 
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=10,
-            ) as response:
-                response.read()
+            self._post_notification_url(
+                url,
+                payload,
+                headers,
+            )
 
         except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
+            ValueError,
+            UnicodeError,
+            http.client.HTTPException,
             TimeoutError,
             OSError,
         ):
             return
+
 
 
     def _send_ntfy(
@@ -1075,27 +1526,22 @@ class NotificationManager:
                 f"Bearer {token}"
             )
 
-        request = urllib.request.Request(
-            url,
-            data=content.encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
-
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=10,
-            ) as response:
-                response.read()
+            self._post_notification_url(
+                url,
+                content.encode("utf-8"),
+                headers,
+            )
 
         except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
+            ValueError,
+            UnicodeError,
+            http.client.HTTPException,
             TimeoutError,
             OSError,
         ):
             return
+
 
 
     def _queued_notification_expired(
