@@ -36,6 +36,28 @@ The same warnings and configuration requirements apply. The interface name,
 management subnet, and gateway-side management address must be verified for the
 specific installation before using the scripts.
 
+## Administrator workstation compatibility
+
+The helper scripts run on the **UCG Fiber itself**. The computer used to install
+them can be Linux, macOS, or Windows.
+
+Linux and macOS users can use the standard `ssh` and `scp` clients.
+
+Windows users can use the OpenSSH client available in Windows from PowerShell.
+If the OpenSSH Client optional capability is not installed, it can be enabled
+through Windows before continuing.
+
+No PowerShell version of the actual ONT management helper is required. Once an
+administrator connects to the UCG Fiber over SSH, all remaining commands are
+executed in the gateway's Linux/UniFi OS environment.
+
+Windows users who edit the shell scripts locally must preserve **Unix LF line
+endings**. Converting the scripts to Windows CRLF line endings can prevent the
+gateway from executing them correctly.
+
+See `examples/ucg-fiber/README.md` for Linux/macOS and Windows PowerShell
+transfer examples.
+
 ## Why a helper may be useful on UCG Fiber
 
 A UCG Fiber can use the physical SFP+ interface for the optical module while the

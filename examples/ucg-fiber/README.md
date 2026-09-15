@@ -82,11 +82,133 @@ address if it is otherwise unused.
 
 Do not assume your UCG Fiber uses `eth6`. Verify it on your own device.
 
-## Example installation
+## Installation
 
 > [!WARNING]
-> The commands below change the gateway. Review the scripts first. Have a
-> recovery path available before proceeding.
+> The commands below ultimately change the gateway. Review the scripts first.
+> Have a recovery path available before proceeding.
+
+The `.sh` files do **not** run on Windows, macOS, or the Linux workstation used
+to install them. They run on the UCG Fiber itself.
+
+The administrator's computer is only used to copy the files to the gateway and
+open an SSH session.
+
+### Linux / macOS
+
+Open a terminal in the `examples/ucg-fiber/` directory.
+
+Set the LAN address of your UCG Fiber:
+
+```sh
+UCG_IP="YOUR_UCG_FIBER_IP"
+```
+
+Create a temporary staging directory on the gateway:
+
+```sh
+ssh root@"$UCG_IP" 'mkdir -p /tmp/ucg-fiber-helper'
+```
+
+Copy the two scripts:
+
+```sh
+scp ont-management-watch.sh root@"$UCG_IP":/tmp/ucg-fiber-helper/
+scp 20-ont-management.sh root@"$UCG_IP":/tmp/ucg-fiber-helper/
+```
+
+Connect to the gateway:
+
+```sh
+ssh root@"$UCG_IP"
+```
+
+Then, on the UCG Fiber:
+
+```sh
+cd /tmp/ucg-fiber-helper
+```
+
+Continue with **Gateway installation** below.
+
+### Windows PowerShell
+
+Windows is used only to transfer the files and connect to the UCG Fiber. The
+helper scripts still execute on the gateway.
+
+Open PowerShell in the directory containing the two `.sh` files.
+
+First verify that the Windows OpenSSH client is available:
+
+```powershell
+Get-Command ssh
+Get-Command scp
+```
+
+If either command is missing, open **PowerShell as Administrator** and check the
+OpenSSH Client capability:
+
+```powershell
+Get-WindowsCapability -Online |
+    Where-Object Name -like 'OpenSSH.Client*'
+```
+
+If its state is `NotPresent`, install it:
+
+```powershell
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+```
+
+Return to a normal PowerShell window and set the LAN address of the UCG Fiber:
+
+```powershell
+$UcgIp = "YOUR_UCG_FIBER_IP"
+```
+
+Create a temporary staging directory on the gateway:
+
+```powershell
+ssh "root@$UcgIp" "mkdir -p /tmp/ucg-fiber-helper"
+```
+
+Copy the scripts:
+
+```powershell
+scp .\ont-management-watch.sh "root@${UcgIp}:/tmp/ucg-fiber-helper/"
+scp .\20-ont-management.sh "root@${UcgIp}:/tmp/ucg-fiber-helper/"
+```
+
+Connect to the gateway:
+
+```powershell
+ssh "root@$UcgIp"
+```
+
+Then, on the UCG Fiber:
+
+```sh
+cd /tmp/ucg-fiber-helper
+```
+
+Continue with **Gateway installation** below.
+
+### Windows line-ending warning
+
+These are POSIX shell scripts and must use **Unix LF line endings**.
+
+`scp` transfers the files as-is, but some Windows editors or Git configurations
+may convert shell scripts to CRLF line endings.
+
+If you edit either script on Windows, verify that your editor is using `LF`
+before copying the file to the gateway.
+
+A script damaged by CRLF conversion may fail with an error similar to a
+`/bin/sh^M` or `bad interpreter` message.
+
+### Gateway installation
+
+From this point onward, the commands are the same regardless of whether the
+administrator's computer is running Windows, Linux, or macOS.
 
 Copy the watcher to persistent storage:
 

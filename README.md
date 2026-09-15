@@ -596,6 +596,8 @@ The Docker host must be able to reach the management IP of the ONT. The dashboar
 
 The optional UCG Fiber helper scripts are also usable **without X-ONU-SFPP Dashboard**. They can be used independently to maintain persistent access to an ONT management interface for its web UI, SSH, or other administrative tools.
 
+The helper documentation includes installation paths for Linux/macOS and Windows PowerShell. In all cases, the helper scripts themselves execute on the UCG Fiber gateway, not on the administrator's computer.
+
 ### UniFi Cloud Gateway Fiber users
 
 > [!CAUTION]
