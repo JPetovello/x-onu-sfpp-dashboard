@@ -94,7 +94,8 @@ to install them. They run on the UCG Fiber itself.
 The administrator's computer is only used to copy the files to the gateway and
 open an SSH session.
 
-### Linux / macOS
+<details>
+<summary><strong>Linux / macOS</strong></summary>
 
 Open a terminal in the `examples/ucg-fiber/` directory.
 
@@ -131,7 +132,10 @@ cd /tmp/ucg-fiber-helper
 
 Continue with **Gateway installation** below.
 
-### Windows PowerShell
+</details>
+
+<details>
+<summary><strong>Windows PowerShell</strong></summary>
 
 Windows is used only to transfer the files and connect to the UCG Fiber. The
 helper scripts still execute on the gateway.
@@ -192,7 +196,7 @@ cd /tmp/ucg-fiber-helper
 
 Continue with **Gateway installation** below.
 
-### Windows line-ending warning
+#### Windows line-ending warning
 
 These are POSIX shell scripts and must use **Unix LF line endings**.
 
@@ -204,6 +208,8 @@ before copying the file to the gateway.
 
 A script damaged by CRLF conversion may fail with an error similar to a
 `/bin/sh^M` or `bad interpreter` message.
+
+</details>
 
 ### Gateway installation
 
