@@ -2,7 +2,7 @@
 
 This document describes the internal architecture and development workflow for X-ONU Dashboard.
 
-For installation, configuration, supported features, alert settings, notification providers, and normal operation, see [README.md](README.md).
+For installation, configuration, supported features, alert settings, notification providers, normal operation, and user-facing UCG Fiber helper instructions, see [README.md](README.md).
 
 ## Architecture Overview
 
@@ -31,6 +31,10 @@ Both collectors store historical data in SQLite and feed telemetry into the serv
 
 Alert generation and notification delivery are intentionally separate. An alert can be generated and stored even when external notifications are disabled or a notification provider is unavailable.
 
+Dashboard authentication, browser security headers, ONT TLS verification, history downsampling, alert runtime-state persistence, and notification destination validation are application hardening layers around this same core runtime architecture. They do not change the two-collector model shown above.
+
+The optional UCG Fiber ONT-management helper under `examples/ucg-fiber/` is not part of this runtime architecture. It runs independently on a UCG Fiber and exists only to help maintain management access to an ONT installed directly in the gateway.
+
 ## Source Layout
 
 ### `app.py`
@@ -40,19 +44,25 @@ Main Flask application and core telemetry collector.
 Responsibilities include:
 
 - Flask application setup and HTTP routes
+- Optional dashboard authentication
+- Browser security headers
+- ONT TLS verification configuration
 - Core 8311 JSON telemetry collection
-- Core telemetry persistence
-- Core history queries
+- Core telemetry validation and persistence
+- Core history queries and SQL-side downsampling
 - Core alert processing
 - API endpoints used by the web interface
+- Health endpoint used by container health checking
 - Startup of the core and advanced collectors
 - Integration with retention management
 
-Application-level objects are initialized when the module starts, including the database, retention manager, advanced collector, and background collection threads.
+Application-level objects are initialized when the module starts, including the database, retention manager, advanced collector, alert manager, and background collection threads.
 
 Because collectors are started within the application process, the production Gunicorn configuration intentionally uses a single worker. Starting multiple worker processes without redesigning collector ownership could create duplicate collectors and duplicate alert evaluation.
 
 Threads may still be used within that single process for HTTP handling and background work.
+
+Core telemetry exposed to browser-facing JSON must be JSON-safe. Non-numeric or non-finite values such as `NaN` and `Infinity` must not be allowed to poison API responses. Preserve the current normalization behavior when changing parsing or API serialization.
 
 ### `advanced.py`
 
@@ -107,6 +117,8 @@ Responsibilities include:
 - Counter cooldown behavior
 - Recovery events
 - Alert history persistence
+- Runtime-state persistence across restarts
+- Policy-change rebaselining
 - Coordination with notification delivery
 
 Counter-based alerts are based on increases between observations rather than simply checking whether an ONT lifetime counter is non-zero.
@@ -120,6 +132,18 @@ When modifying counter handling, preserve the concepts of:
 - counter resets
 - configured minimum deltas
 - cooldown periods
+- persisted runtime baselines
+- rebaselining after policy changes
+
+Runtime alert state is persisted so a container or application restart does not automatically discard every active baseline, debounce state, and transition context.
+
+Configuration changes deliberately rebaseline the affected policy state instead of treating the configuration change itself as a telemetry transition. Do not broadly reset unrelated alert state when only one policy area changes.
+
+#### PLOAM operational state
+
+PLOAM health must be evaluated against the configured operational state rather than a separate browser hard-coded value.
+
+The default operational state is `51`, but both server and browser behavior must consume the configured value so installations using a different valid operational state remain consistent.
 
 #### TX health profiles
 
@@ -197,7 +221,11 @@ Supported providers include:
 
 Notification delivery is asynchronous and intentionally isolated from telemetry collection and alert storage.
 
-New alert events are placed into a FIFO notification queue. The notification worker processes those events separately so a slow, unreachable, or incorrectly configured notification service cannot block telemetry collection.
+New alert events are placed into a bounded FIFO notification queue. When the queue reaches its configured maximum size, the queue policy preserves newer work rather than allowing an unbounded backlog to consume memory indefinitely.
+
+The notification worker processes events separately so a slow, unreachable, or incorrectly configured notification service cannot block telemetry collection.
+
+Notification destinations are treated as untrusted network input. Preserve the current SSRF protections and destination validation when adding providers or changing request behavior.
 
 Provider failures should remain contained within the notification subsystem.
 
@@ -215,6 +243,8 @@ For an existing installation without a saved retention configuration, the legacy
 
 New installations use the dashboard's current default retention values.
 
+Invalid or corrupt retention configuration must fail defensively rather than silently deleting more data than intended.
+
 Changes to retention initialization must be careful not to silently replace an existing user's effective retention policy.
 
 ## Persistent Data
@@ -227,7 +257,7 @@ The primary SQLite database is:
 /data/metrics.db
 ```
 
-The database contains telemetry history as well as application configuration and alert history.
+The database contains telemetry history as well as application configuration, alert history, and persisted alert runtime state.
 
 Important data includes:
 
@@ -235,12 +265,15 @@ Important data includes:
 - advanced telemetry samples
 - alert events
 - alert configuration
+- alert runtime state
 - notification configuration
 - retention configuration
 
 The application creates required database structures during startup when they do not already exist.
 
 Database changes should remain compatible with existing installations whenever practical. The dashboard is designed to upgrade an existing persistent `/data` directory without destroying historical telemetry or saved configuration.
+
+Runtime-state persistence must remain compatible with existing databases. Loading persisted state should never make an older installation unusable merely because the stored runtime-state row is absent, incomplete, or from an earlier compatible configuration.
 
 ## SSH Host-Key Handling
 
@@ -257,6 +290,57 @@ The trusted key is stored in:
 After a key has been saved, future connections require the ONT to present the same host key.
 
 Do not change this behavior to automatically accept replacement keys. A changed host key should require deliberate intervention rather than silently replacing the trusted key.
+
+## Dashboard Authentication
+
+Dashboard authentication is optional.
+
+It is enabled only when both environment variables are configured:
+
+```text
+DASHBOARD_AUTH_USERNAME
+DASHBOARD_AUTH_PASSWORD
+```
+
+If only one variable is supplied, the application must refuse to start rather than run with a partially configured authentication state.
+
+When authentication is enabled, normal dashboard pages and APIs require valid credentials. The `/api/health` endpoint is intentionally exempt so container health checking does not depend on application credentials.
+
+Do not weaken route coverage when adding pages or API endpoints. New routes should inherit the same authentication boundary unless there is a deliberate, documented reason for an exception.
+
+Credentials must not be returned through configuration APIs, logs, browser JavaScript, or error responses.
+
+## ONT TLS Verification
+
+Core metrics requests support configurable TLS certificate verification.
+
+Relevant environment variables are:
+
+```text
+ONT_TLS_VERIFY
+ONT_TLS_CA_BUNDLE
+```
+
+Do not replace the configurable verification behavior with a global `verify=False` or another unconditional certificate bypass.
+
+When verification is enabled, certificate failures should remain visible as collection failures rather than being silently ignored.
+
+If a custom CA bundle is configured, validate and use it only for the intended ONT HTTPS connection path.
+
+## Browser Security Headers
+
+The Flask application deliberately applies restrictive browser security headers, including:
+
+- Content-Security-Policy
+- X-Content-Type-Options
+- X-Frame-Options
+- Referrer-Policy
+
+The Content Security Policy is intended to keep application resources self-hosted and prevent unexpected script, object, framing, and form-action sources.
+
+When adding frontend dependencies or browser features, prefer self-hosted assets and preserve the restrictive policy. Do not relax CSP merely to make an external script or stylesheet convenient.
+
+Persisted or server-provided alert/error text must be rendered as text, not injected as trusted HTML. Avoid routing untrusted strings through `innerHTML` or equivalent HTML-parsing sinks.
 
 ## Alert and Notification Flow
 
@@ -275,7 +359,7 @@ Telemetry sample
       │
       ├──> SQLite alert history
       │
-      └──> Notification queue
+      └──> Bounded notification queue
                   │
                   v
           Notification worker
@@ -290,7 +374,7 @@ This separation is deliberate. Do not make telemetry collection or alert persist
 
 ## Flask API
 
-The Flask API is used by the browser interface to retrieve telemetry, history, alerts, and configuration.
+The Flask API is used by the browser interface to retrieve telemetry, history, alerts, configuration, and health status.
 
 The application exposes APIs for areas including:
 
@@ -303,17 +387,32 @@ The application exposes APIs for areas including:
 - available TX health profiles
 - notification configuration
 - retention configuration
+- application health
 
 Alert history supports `limit` and `offset` so the browser can paginate stored events without loading the entire retained history.
+
+Pagination inputs must remain bounded. Large user-controlled offsets or limits must not be allowed to create unbounded work or pathological database behavior.
+
+History endpoints downsample in SQL when appropriate instead of loading an arbitrarily large retained dataset into Python and reducing it afterward. Preserve this property when changing chart history queries.
 
 When adding or changing an API:
 
 1. Keep existing clients and saved configuration in mind.
 2. Validate user-supplied values server-side.
-3. Avoid returning notification credentials or SSH passwords unnecessarily.
-4. Keep telemetry collection independent from browser activity.
+3. Normalize non-finite telemetry before JSON serialization.
+4. Avoid returning notification credentials or SSH passwords unnecessarily.
+5. Preserve the dashboard authentication boundary.
+6. Keep telemetry collection independent from browser activity.
 
 The collectors are server-side processes. The dashboard does not need to remain open in a browser for telemetry, alerts, or notifications to operate.
+
+### Health endpoint
+
+`/api/health` is used by the container health check.
+
+It should remain lightweight, deterministic, and safe to call without dashboard authentication. Do not make health reporting depend on optional SSH telemetry or an external notification provider.
+
+A healthy application process does not necessarily mean every optional external dependency is reachable. Keep health semantics focused on whether the dashboard service itself is operating.
 
 ## Frontend
 
@@ -336,6 +435,10 @@ HTML templates provide the corresponding pages and reusable content.
 
 The frontend should consume the Flask API rather than duplicating server-side monitoring logic in the browser.
 
+Browser display logic must not silently diverge from server-side operational policy. Shared behaviors such as TX classification and configured PLOAM operational state require parity tests when changed.
+
+Untrusted server or persisted text must be inserted with text-safe DOM operations unless the content is explicitly static and trusted.
+
 ## Background Processing
 
 The application performs several operations outside normal browser requests:
@@ -343,12 +446,45 @@ The application performs several operations outside normal browser requests:
 - core telemetry polling
 - advanced SSH telemetry polling
 - server-side alert evaluation
+- alert runtime-state persistence
 - asynchronous notification delivery
 - retention cleanup
 
 These operations are intended to continue whether or not a user has the dashboard open.
 
 When changing startup or threading behavior, verify that a change cannot accidentally start duplicate collectors or duplicate notification processing.
+
+## Optional UCG Fiber ONT-Management Helper
+
+The files under:
+
+```text
+examples/ucg-fiber/
+```
+
+are optional helper material for installations where an X-ONU-SFPP or compatible ONT is installed directly in a UniFi Cloud Gateway Fiber and management access must coexist with PPPoE.
+
+The helper is deliberately separate from the dashboard runtime:
+
+- it runs on the UCG Fiber, not in the dashboard container
+- the dashboard does not require it
+- the dashboard must continue to work normally when it is not installed
+- helper failure must not be treated as a dashboard application failure
+- installing or removing the helper is an explicit administrator action
+
+The helper scripts are unofficial community examples. UniFi OS behavior can change between releases, so networking commands and interface assumptions must be treated cautiously.
+
+When changing these scripts:
+
+1. Preserve the warnings and explicit opt-in nature of the helper.
+2. Do not assume a fixed physical interface, management subnet, or gateway-side address without validation.
+3. Avoid commands that unnecessarily disrupt the PPPoE WAN session.
+4. Keep installation and removal steps reversible.
+5. Validate POSIX shell syntax.
+6. Keep Linux/macOS and Windows installation documentation aligned with the actual files in `examples/ucg-fiber/`.
+7. Do not make the dashboard container depend on UCG Fiber-specific behavior.
+
+Detailed user instructions belong in [docs/ucg-fiber-ont-management.md](docs/ucg-fiber-ont-management.md) and [examples/ucg-fiber/README.md](examples/ucg-fiber/README.md), not in the runtime architecture sections of this document.
 
 ## Design Principles
 
@@ -366,6 +502,10 @@ Monitoring must continue without an open browser.
 
 Alert detection and storage must work even when every notification provider is disabled or failing.
 
+### Notification delivery is bounded
+
+A failed or slow notification destination must not create an indefinitely growing in-memory backlog.
+
 ### Historical counters need baselines
 
 ONT counters are generally cumulative. Alerting on the existence of a non-zero counter is different from alerting on newly accumulated errors.
@@ -374,6 +514,14 @@ ONT counters are generally cumulative. Alerting on the existence of a non-zero c
 
 An ONT reboot or subsystem reset can cause cumulative counters to decrease. A reset must not be interpreted as a negative traffic rate or an unexpectedly large error delta.
 
+### Alert state survives ordinary restarts
+
+Runtime alert state is persisted deliberately. Avoid changes that turn every normal restart into a complete loss of debounce, baseline, cooldown, or transition context.
+
+### Policy changes rebaseline, not replay history
+
+Changing alert policy should not itself fabricate telemetry transitions or rewrite historical events.
+
 ### Persistent data belongs in `/data`
 
 Container replacement and application upgrades should not destroy telemetry history or configuration when the persistent data directory is preserved.
@@ -381,6 +529,18 @@ Container replacement and application upgrades should not destroy telemetry hist
 ### Existing installations matter
 
 Database initialization, retention migration, and configuration changes should avoid silently changing established behavior.
+
+### Browser-facing data must be safe
+
+Telemetry must be valid JSON, untrusted text must not become executable HTML, and security headers should remain restrictive.
+
+### Network destinations are untrusted input
+
+Notification URLs and similar outbound destinations must preserve SSRF protections. ONT HTTPS certificate verification must remain explicit and configurable rather than globally disabled.
+
+### Optional helpers stay optional
+
+UCG Fiber helper scripts are separate from dashboard runtime behavior. Do not introduce a dependency from the core application onto platform-specific gateway modifications.
 
 ### ONT behavior should be verified against hardware
 
@@ -407,7 +567,9 @@ docker run -d \
 
 Using a separate container name, host port, and data directory helps prevent development work from modifying a production installation.
 
-Adjust ONT and SSH environment variables as required for the development environment.
+Adjust ONT, TLS, authentication, and SSH environment variables as required for the development environment.
+
+Do not reuse a production `/data` directory for development testing.
 
 ## Development Workflow
 
@@ -417,11 +579,14 @@ A safe development workflow is:
 2. Make changes in the source checkout rather than inside the production container.
 3. Build a separate development image.
 4. Run it with a separate container name, port, and persistent data directory.
-5. Test against the intended ONT and 8311 firmware behavior.
-6. Review the Git diff before committing.
-7. Do not replace the production container until the change has been validated.
+5. Test against the intended ONT and 8311 firmware behavior when hardware interaction is relevant.
+6. Test security and failure behavior appropriate to the changed subsystem.
+7. Review the Git diff before committing.
+8. Do not replace the production container until the change has been validated.
 
 For documentation-only changes, verify that the diff contains only Markdown, comments, or docstrings and does not alter executable behavior.
+
+Changes to UCG Fiber helper scripts should be treated as networking/system-script changes rather than ordinary dashboard frontend changes. Do not test an unreviewed helper change against a production WAN path merely to validate syntax.
 
 ## Before Submitting Changes
 
@@ -433,32 +598,76 @@ git diff --check
 git diff
 ```
 
-For Python changes, also verify that modified modules compile successfully before building the container.
-
-Run the automated TX profile, classification-parity, migration, and alert-state tests with:
+Run the complete Python regression suite with:
 
 ```bash
 python3 -m unittest discover -s tests -v
-node tests/test_tx_health.js
-node tests/test_alert_settings.js
 ```
 
-Check Python and JavaScript syntax with:
+Run the JavaScript regression suites with:
+
+```bash
+node tests/test_tx_health.js
+node tests/test_alert_settings.js
+node tests/test_dashboard_health.js
+node tests/test_alert_rendering.js
+```
+
+The TX classification implementations must continue to agree with the shared cases in:
+
+```text
+tests/tx_classification_cases.json
+```
+
+Check Python syntax with:
 
 ```bash
 python3 -m compileall -q .
-node --check static/tx_health.js
-node --check static/dashboard.js
-node --check static/alerts.js
 ```
 
-For changes involving collectors, alerts, retention, or notifications, test both normal operation and failure behavior. A failure in an optional subsystem should not unexpectedly stop unrelated monitoring.
+Check JavaScript syntax for all maintained frontend files, or at minimum every modified JavaScript file. For example:
+
+```bash
+for f in static/*.js; do
+  node --check "$f"
+done
+```
+
+Validate the UCG Fiber helper scripts when they are modified:
+
+```bash
+sh -n examples/ucg-fiber/20-ont-management.sh
+sh -n examples/ucg-fiber/ont-management-watch.sh
+```
+
+For container or startup changes, build the development image and verify that its health check reaches a healthy state.
+
+For authentication changes, test:
+
+- authentication disabled when both variables are unset
+- startup refusal for partial configuration
+- successful and failed authentication
+- `/api/health` remains reachable as intended
+
+For TLS changes, test verification enabled, verification disabled, invalid configuration, and custom CA-bundle handling as applicable.
+
+For notification changes, test queue bounds, provider failure isolation, and SSRF protections.
+
+For alert changes, test restart persistence, policy rebaselining, configured PLOAM operational state, and browser/server classification parity where applicable.
+
+For history changes, test SQL-side downsampling and bounded pagination behavior.
+
+For retention changes, test both valid configuration and corrupt/invalid saved configuration.
+
+For changes involving collectors, alerts, retention, notifications, authentication, TLS, or helper scripts, test both normal operation and failure behavior. A failure in an optional subsystem should not unexpectedly stop unrelated monitoring.
 
 ## Project Scope
 
 X-ONU Dashboard is primarily developed and hardware-tested against the EXEN X-ONU-SFPP and compatible ONTs running 8311 community firmware.
 
 Compatibility changes for other hardware or firmware should avoid breaking behavior already validated on the project's primary supported platform.
+
+The UCG Fiber helper is platform-specific optional tooling and should not narrow the dashboard application's broader ability to run anywhere that can reach the ONT management interface.
 
 ## Dependency Lock Maintenance
 
