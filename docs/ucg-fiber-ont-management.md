@@ -19,6 +19,23 @@ must be able to reach the ONT management IP.
 
 If that connectivity is already stable, no gateway helper is needed.
 
+## Standalone use without X-ONU-SFPP Dashboard
+
+These helper scripts do **not** depend on X-ONU-SFPP Dashboard, Docker, or the
+dashboard container.
+
+They may be used independently by a UCG Fiber owner who simply wants persistent
+access to an ONT management interface for purposes such as:
+
+- Logging in to the ONT web interface
+- Accessing the ONT over SSH
+- Running diagnostic or administrative tools
+- Maintaining a reliable management path to the ONT
+
+The same warnings and configuration requirements apply. The interface name,
+management subnet, and gateway-side management address must be verified for the
+specific installation before using the scripts.
+
 ## Why a helper may be useful on UCG Fiber
 
 A UCG Fiber can use the physical SFP+ interface for the optical module while the

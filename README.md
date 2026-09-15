@@ -594,6 +594,8 @@ password with the same care as `SSH_PASSWORD`.
 
 The Docker host must be able to reach the management IP of the ONT. The dashboard does not create or manage that network path for you.
 
+The optional UCG Fiber helper scripts are also usable **without X-ONU-SFPP Dashboard**. They can be used independently to maintain persistent access to an ONT management interface for its web UI, SSH, or other administrative tools.
+
 ### UniFi Cloud Gateway Fiber users
 
 > [!CAUTION]

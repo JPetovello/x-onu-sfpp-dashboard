@@ -23,6 +23,11 @@
 The X-ONU-SFPP Dashboard only requires that the machine running it can reach the
 ONT management interface. The dashboard itself does not require these scripts.
 
+These scripts also do **not** require X-ONU-SFPP Dashboard. They may be used as
+a standalone UCG Fiber helper to preserve direct access to an ONT web interface,
+SSH service, or other management tools. No Dashboard container or Docker
+installation is required for that use case.
+
 On some UniFi gateway configurations, a management IP manually added to the
 physical WAN/SFP+ interface can disappear when UniFi reapplies interface
 configuration. This can happen around provisioning or other network
