@@ -590,6 +590,17 @@ Users with access to the Docker or Unraid host may be able to inspect
 container environment variables. Protect the dashboard authentication
 password with the same care as `SSH_PASSWORD`.
 
+## ONT Management Connectivity
+
+The Docker host must be able to reach the management IP of the ONT. The dashboard does not create or manage that network path for you.
+
+### UniFi Cloud Gateway Fiber users
+
+> [!CAUTION]
+> **⚠️ USE AT YOUR OWN RISK.** Optional UCG Fiber reference scripts are provided for users whose gateway repeatedly removes a manually configured ONT management address. These scripts modify a **WAN-side interface** and can disrupt Internet access, PPPoE connectivity, ONT management access, or other network services if configured incorrectly. They are unofficial, are not required by the dashboard, and **must be reviewed and adapted for each network before use**.
+
+See [UCG Fiber and Persistent ONT Management Access](docs/ucg-fiber-ont-management.md) and the [`examples/ucg-fiber/`](examples/ucg-fiber/) reference scripts.
+
 ## Docker Image
 
 The published Docker image is:
