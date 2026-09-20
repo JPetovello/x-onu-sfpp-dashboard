@@ -1277,6 +1277,109 @@ pontop -b -g 'Optical Interface Info'
             )
 
 
+    def diagnostics(
+        self,
+        profile="overview",
+    ):
+        """Run one fixed, on-demand ONT diagnostic profile.
+
+        Diagnostic commands are deliberately selected from a
+        hardcoded allowlist. Callers cannot provide shell commands.
+        Results are returned only to the requester and are not
+        persisted or fed into alert processing.
+        """
+
+        profiles = {
+            "overview": r"""
+echo __XONU_STATUS__
+pontop -b -g s
+
+echo __XONU_CAPABILITY__
+pontop -b -g c
+
+echo __XONU_LAN__
+pontop -b -g 'LAN Interface Status & Counters'
+
+echo __XONU_ALARMS__
+pontop -b -g w
+
+echo __XONU_OPTICAL_STATUS__
+pontop -b -g 'Optical Interface Status'
+
+echo __XONU_OPTICAL_INFO__
+pontop -b -g 'Optical Interface Info'
+""",
+            "counters": r"""
+echo __XONU_ALLOCATION_COUNTERS__
+pontop -b -g 'Allocation Counters'
+
+echo __XONU_PLOAM_DOWNSTREAM__
+pontop -b -g 'PLOAM Downstream Counters'
+
+echo __XONU_PLOAM_UPSTREAM__
+pontop -b -g 'PLOAM Upstream Counters'
+""",
+        }
+
+        command = profiles.get(
+            profile
+        )
+
+        if command is None:
+            raise ValueError(
+                "Unknown diagnostic profile"
+            )
+
+        if not self.enabled:
+            return {
+                "enabled": False,
+                "online": False,
+                "profile": profile,
+                "error": (
+                    "Advanced SSH telemetry is disabled"
+                ),
+                "sections": {},
+            }
+
+        client = None
+
+        try:
+            client = self._ssh_client()
+
+            output = self._exec(
+                client,
+                command,
+            )
+
+            sections = self._split_sections(
+                output
+            )
+
+            return {
+                "enabled": True,
+                "online": True,
+                "profile": profile,
+                "error": None,
+                "sections": sections,
+            }
+
+        except Exception as exc:
+            return {
+                "enabled": True,
+                "online": False,
+                "profile": profile,
+                "error": (
+                    f"{type(exc).__name__}: "
+                    f"{exc}"
+                ),
+                "sections": {},
+            }
+
+        finally:
+            if client is not None:
+                client.close()
+
+
     def collect_once(self):
         """Perform one advanced collection cycle.
 

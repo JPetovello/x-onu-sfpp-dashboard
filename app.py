@@ -818,6 +818,32 @@ def api_advanced_stats():
 
 
 
+@app.route("/api/diagnostics")
+def api_diagnostics():
+
+    profile = request.args.get(
+        "profile",
+        "overview",
+    )
+
+    if profile not in {
+        "overview",
+        "counters",
+    }:
+        return jsonify({
+            "error": "Unknown diagnostic profile",
+        }), 400
+
+    return jsonify(
+        json_safe_telemetry(
+            advanced_collector.diagnostics(
+                profile
+            )
+        )
+    )
+
+
+
 @app.route("/api/alerts")
 def api_alerts():
 
