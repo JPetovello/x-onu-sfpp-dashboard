@@ -1,0 +1,38 @@
+<nav
+    class="dashboard-settings-nav"
+    aria-label="Dashboard sections">
+
+    <a
+        href="/"
+        class="settings-nav-link"
+        {% if active_page == "dashboard" %}
+        aria-current="page"
+        {% endif %}>
+        Dashboard
+    </a>
+
+    <a
+        href="/advanced"
+        class="settings-nav-link"
+        {% if active_page == "advanced" %}
+        aria-current="page"
+        {% endif %}>
+        Advanced
+    </a>
+
+    <a
+        href="/diagnostics"
+        class="settings-nav-link"
+        {% if active_page == "diagnostics" %}
+        aria-current="page"
+        {% endif %}>
+        Diagnostics
+    </a>
+
+    <a
+        href="/alerts-settings"
+        class="settings-nav-link">
+        Alerts & Notifications
+    </a>
+
+</nav>

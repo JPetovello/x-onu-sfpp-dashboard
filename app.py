@@ -506,6 +506,25 @@ def index():
     return render_template(
         "index.html",
         poll_seconds=POLL_SECONDS,
+        active_page="dashboard",
+    )
+
+
+
+@app.route("/advanced")
+def advanced_page():
+    return render_template(
+        "advanced.html",
+        active_page="advanced",
+    )
+
+
+
+@app.route("/diagnostics")
+def diagnostics_page():
+    return render_template(
+        "diagnostics.html",
+        active_page="diagnostics",
     )
 
 
