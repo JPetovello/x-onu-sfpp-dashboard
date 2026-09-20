@@ -83,7 +83,7 @@
         <div class="diagnostics-profile-control">
 
             <div>
-                <h3>
+                <h3 id="diagnosticsStandardTitle">
                     Standard Diagnostics
                 </h3>
 
@@ -92,19 +92,24 @@
                 </p>
             </div>
 
-            <div class="diagnostics-profile-buttons">
+            <div
+                class="diagnostics-profile-buttons"
+                role="group"
+                aria-labelledby="diagnosticsStandardTitle">
 
                 <button
                     type="button"
                     class="diagnostics-profile-button active"
-                    data-diagnostics-profile="overview">
+                    data-diagnostics-profile="overview"
+                    aria-pressed="true">
                     Overview
                 </button>
 
                 <button
                     type="button"
                     class="diagnostics-profile-button"
-                    data-diagnostics-profile="counters">
+                    data-diagnostics-profile="counters"
+                    aria-pressed="false">
                     Counters
                 </button>
 
@@ -112,10 +117,10 @@
 
         </div>
 
-        <div class="diagnostics-profile-control diagnostics-expert-control">
+        <div class="diagnostics-profile-control">
 
             <div>
-                <h3>
+                <h3 id="diagnosticsExpertTitle">
                     Expert Diagnostics
                 </h3>
 
@@ -125,26 +130,32 @@
                 </p>
             </div>
 
-            <div class="diagnostics-profile-buttons">
+            <div
+                class="diagnostics-profile-buttons"
+                role="group"
+                aria-labelledby="diagnosticsExpertTitle">
 
                 <button
                     type="button"
                     class="diagnostics-profile-button"
-                    data-diagnostics-profile="datapath">
+                    data-diagnostics-profile="datapath"
+                    aria-pressed="false">
                     Datapath
                 </button>
 
                 <button
                     type="button"
                     class="diagnostics-profile-button"
-                    data-diagnostics-profile="ppv4">
+                    data-diagnostics-profile="ppv4"
+                    aria-pressed="false">
                     PPv4
                 </button>
 
                 <button
                     type="button"
                     class="diagnostics-profile-button"
-                    data-diagnostics-profile="burst">
+                    data-diagnostics-profile="burst"
+                    aria-pressed="false">
                     Burst Profile
                 </button>
 
@@ -185,7 +196,7 @@
                 RESULTS
             </p>
 
-            <h2>
+            <h2 id="diagnosticsResultsTitle">
                 Diagnostic Output
             </h2>
 
@@ -201,7 +212,10 @@
 
     <div
         id="diagnosticsResults"
-        class="diagnostics-results">
+        class="diagnostics-results"
+        role="region"
+        aria-labelledby="diagnosticsResultsTitle"
+        aria-busy="false">
 
         <p class="diagnostics-empty">
             No diagnostics have been run yet.

@@ -141,6 +141,11 @@
                             ? " active"
                             : ""
                     );
+
+                button.ariaPressed =
+                    active
+                        ? "true"
+                        : "false";
             }
         );
 
@@ -153,6 +158,13 @@
     ) {
         running =
             busy;
+
+        if (resultsElement) {
+            resultsElement.ariaBusy =
+                busy
+                    ? "true"
+                    : "false";
+        }
 
         if (runButton) {
             runButton.disabled =
@@ -247,13 +259,23 @@
                         "pre"
                     );
 
-                pre.className =
-                    "diagnostics-output";
-
-                pre.textContent =
+                const outputText =
                     output == null
                         ? ""
                         : String(output);
+
+                const outputIsEmpty =
+                    outputText.trim() === "";
+
+                pre.className =
+                    outputIsEmpty
+                        ? "diagnostics-output diagnostics-output-empty"
+                        : "diagnostics-output";
+
+                pre.textContent =
+                    outputIsEmpty
+                        ? "No output returned."
+                        : outputText;
 
 
                 article.append(

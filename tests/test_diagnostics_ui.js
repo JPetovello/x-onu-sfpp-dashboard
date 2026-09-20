@@ -570,6 +570,130 @@ function createHarness(
         false
     );
 })
+
+.then(async () => {
+    // empty diagnostic section renders explicit placeholder
+    const harness =
+        createHarness(
+            async () => ({
+                ok: true,
+                status: 200,
+
+                async json() {
+                    return {
+                        enabled: true,
+                        online: true,
+                        profile: "ppv4",
+                        error: null,
+                        sections: {
+                            PPV4_QSTATS: "   \n",
+                        },
+                    };
+                },
+            })
+        );
+
+    assert.equal(
+        harness.context
+            .xonuDiagnostics
+            .setSelectedProfile(
+                "ppv4"
+            ),
+        true
+    );
+
+    await harness.context
+        .xonuDiagnostics
+        .runDiagnostics();
+
+    const article =
+        harness.elements
+            .diagnosticsResults
+            .childNodes[0];
+
+    assert.equal(
+        article.childNodes[0]
+            .textContent,
+        "PPv4 QStats"
+    );
+
+    assert.equal(
+        article.childNodes[1]
+            .textContent,
+        "No output returned."
+    );
+
+    assert.equal(
+        article.childNodes[1]
+            .className,
+        "diagnostics-output diagnostics-output-empty"
+    );
+})
+
+.then(async () => {
+    // profile accessibility state stays synchronized
+    const harness =
+        createHarness(
+            async () => ({
+                ok: true,
+                status: 200,
+
+                async json() {
+                    return {
+                        enabled: true,
+                        online: true,
+                        profile: "ppv4",
+                        error: null,
+                        sections: {
+                            PPV4_TREE: "raw",
+                        },
+                    };
+                },
+            })
+        );
+
+    assert.equal(
+        harness.context
+            .xonuDiagnostics
+            .setSelectedProfile(
+                "ppv4"
+            ),
+        true
+    );
+
+    for (const button of
+        harness.profileButtons) {
+        assert.equal(
+            button.ariaPressed,
+            button.dataset
+                .diagnosticsProfile
+                === "ppv4"
+                ? "true"
+                : "false"
+        );
+    }
+
+    const runPromise =
+        harness.context
+            .xonuDiagnostics
+            .runDiagnostics();
+
+    assert.equal(
+        harness.elements
+            .diagnosticsResults
+            .ariaBusy,
+        "true"
+    );
+
+    await runPromise;
+
+    assert.equal(
+        harness.elements
+            .diagnosticsResults
+            .ariaBusy,
+        "false"
+    );
+})
 .then(() => {
     console.log(
         "Diagnostics UI is manual, safe, and profile-scoped"

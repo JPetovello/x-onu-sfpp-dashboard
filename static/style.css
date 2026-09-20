@@ -2164,10 +2164,6 @@ footer {
     line-height: 1.45;
 }
 
-.diagnostics-expert-control {
-    border-color: var(--warning);
-}
-
 .diagnostics-profile-buttons {
     display: flex;
     flex-wrap: wrap;
@@ -2179,8 +2175,29 @@ footer {
     min-height: 40px;
 }
 
+.diagnostics-profile-button:focus-visible,
+.diagnostics-run-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .diagnostics-run-button {
+    border-color: var(--button-active-border);
+    background: var(--button-active-bg);
+    color: var(--button-active-text);
     font-weight: 700;
+}
+
+.diagnostics-profile-button:disabled,
+.diagnostics-run-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.diagnostics-run-button:disabled {
+    border-color: var(--line);
+    background: var(--button-bg);
+    color: var(--muted);
 }
 
 .diagnostics-status {
@@ -2234,6 +2251,11 @@ footer {
     max-height: 520px;
     margin: 0;
     overflow: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color:
+        var(--button-hover-border)
+        transparent;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     font: inherit;
@@ -2247,6 +2269,12 @@ footer {
         monospace;
     font-size: 0.82rem;
     line-height: 1.5;
+}
+
+.diagnostics-output-empty {
+    color: var(--muted);
+    font-family: inherit;
+    font-style: italic;
 }
 
 @media (max-width: 640px) {
