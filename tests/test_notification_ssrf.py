@@ -1,5 +1,8 @@
+import json
 import socket
+import threading
 import unittest
+import urllib.parse
 from unittest.mock import Mock, patch
 
 from notifications import (
@@ -16,6 +19,7 @@ class NotificationSsrfTests(unittest.TestCase):
             NotificationManager
         )
         self.manager.private_notification_origins = set()
+        self.manager.lock = threading.Lock()
 
     @staticmethod
     def _ipv4(address, port):
@@ -278,6 +282,136 @@ class NotificationSsrfTests(unittest.TestCase):
 
         connection.getresponse.assert_called_once_with()
         connection.close.assert_called_once_with()
+
+    def test_discord_uses_pinned_notification_transport(self):
+        webhook_url = (
+            "https://discord.com/api/webhooks/"
+            "123456/example-token"
+        )
+
+        config = {
+            "discord": {
+                "enabled": True,
+                "webhook_url": webhook_url,
+            },
+        }
+
+        event = {
+            "severity": "warning",
+            "message": "Test alert",
+            "metric": "rx_power",
+        }
+
+        with (
+            patch(
+                "notifications.NOTIFICATION_CONFIG",
+                config,
+            ),
+            patch.object(
+                self.manager,
+                "_post_notification_url",
+                return_value=204,
+            ) as post,
+        ):
+            self.manager._send_discord(event)
+
+        post.assert_called_once()
+
+        url, payload, headers = (
+            post.call_args.args
+        )
+
+        self.assertEqual(url, webhook_url)
+
+        self.assertEqual(
+            json.loads(payload.decode("utf-8")),
+            {
+                "content":
+                    "[WARNING] Test alert\n"
+                    "Metric: rx_power",
+                "allowed_mentions": {
+                    "parse": []
+                },
+            },
+        )
+
+        self.assertEqual(
+            headers,
+            {
+                "Content-Type":
+                    "application/json",
+                "User-Agent":
+                    "X-ONU-SFPP-Dashboard",
+            },
+        )
+
+    def test_pushover_uses_pinned_notification_transport(self):
+        config = {
+            "pushover": {
+                "enabled": True,
+                "user_key": "example-user",
+                "api_token": "example-token",
+            },
+        }
+
+        event = {
+            "severity": "critical",
+            "message": "Test alert",
+            "metric": "tx_power",
+        }
+
+        with (
+            patch(
+                "notifications.NOTIFICATION_CONFIG",
+                config,
+            ),
+            patch.object(
+                self.manager,
+                "_post_notification_url",
+                return_value=200,
+            ) as post,
+        ):
+            self.manager._send_pushover(event)
+
+        post.assert_called_once()
+
+        url, payload, headers = (
+            post.call_args.args
+        )
+
+        self.assertEqual(
+            url,
+            "https://api.pushover.net/1/messages.json",
+        )
+
+        fields = urllib.parse.parse_qs(
+            payload.decode("utf-8")
+        )
+
+        self.assertEqual(
+            fields,
+            {
+                "token": ["example-token"],
+                "user": ["example-user"],
+                "title":
+                    ["X-ONU-SFPP Dashboard"],
+                "message": [
+                    "[CRITICAL] Test alert\n"
+                    "Metric: tx_power"
+                ],
+                "priority": ["1"],
+            },
+        )
+
+        self.assertEqual(
+            headers,
+            {
+                "Content-Type":
+                    "application/x-www-form-urlencoded",
+                "User-Agent":
+                    "X-ONU-SFPP-Dashboard",
+            },
+        )
 
     def test_ipv4_mapped_loopback_is_rejected(self):
         with patch(

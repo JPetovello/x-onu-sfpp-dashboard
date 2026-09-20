@@ -124,6 +124,11 @@ class CoreTLSConfigurationTests(unittest.TestCase):
             True,
         )
 
+        self.assertEqual(
+            request_get.call_args.kwargs["timeout"],
+            dashboard_app.REQUEST_TIMEOUT,
+        )
+
     def test_fetch_metrics_uses_custom_ca_bundle(self):
         response = mock.Mock()
         response.json.return_value = {}

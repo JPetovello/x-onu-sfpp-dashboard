@@ -1,0 +1,134 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Python security scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/xonu-security-tools
+          /tmp/xonu-security-tools/bin/python -m pip install \
+            --disable-pip-version-check \
+            bandit==1.9.4 \
+            pip-audit==2.10.1
+
+      - name: Bandit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t python_files < <(
+            git ls-files '*.py' |
+            grep -v '^tests/'
+          )
+
+          /tmp/xonu-security-tools/bin/bandit \
+            "${python_files[@]}"
+
+      - name: pip-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/xonu-security-tools/bin/pip-audit \
+            -r requirements.lock
+
+      - name: Trivy filesystem scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/src:ro" \
+            aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+            fs \
+            --scanners vuln,misconfig,secret \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --exit-code 1 \
+            /src
+
+      - name: Gitleaks full history
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/repo:ro" \
+            zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            detect \
+            --source=/repo \
+            --redact \
+            --no-banner
+
+      - name: ShellCheck
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t scripts < <(
+            git ls-files '*.sh' '*.bash'
+          )
+
+          for script in "${scripts[@]}"; do
+            echo "Checking $script"
+
+            docker run --rm \
+              -v "$PWD:/src:ro" \
+              koalaman/shellcheck@sha256:bb596a0d169b85ddd81d8b6d3a2ff6d5baf5fca10b97f575ebc647c3dff62b3d \
+              -x "/src/$script"
+          done
+
+      - name: Hadolint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker run --rm -i \
+            hadolint/hadolint@sha256:9a3944b7fddcb947d1ffd90829ac1a6e5c30479223358f249d8b96c7d0019e27 \
+            hadolint - \
+            < Dockerfile
+
+      - name: Build image for vulnerability scan
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker build \
+            -t "xonu-security:${GITHUB_SHA}" \
+            .
+
+          docker save \
+            "xonu-security:${GITHUB_SHA}" \
+            -o "${RUNNER_TEMP}/xonu-security-image.tar"
+
+      - name: Trivy built-image scan
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker run --rm \
+            -v "${RUNNER_TEMP}:/scan:ro" \
+            aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+            image \
+            --input /scan/xonu-security-image.tar \
+            --scanners vuln,secret \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --exit-code 1

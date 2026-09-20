@@ -328,21 +328,29 @@ class RetentionManager:
                     )
                 ).isoformat()
 
-                for table in (
-                    "samples",
-                    "advanced_samples",
-                ):
-                    cursor = con.execute(
-                        f"""
-                        DELETE FROM {table}
-                        WHERE ts < ?
-                        """,
-                        (cutoff,),
-                    )
+                samples_cursor = con.execute(
+                    """
+                    DELETE FROM samples
+                    WHERE ts < ?
+                    """,
+                    (cutoff,),
+                )
 
-                    deleted[table] = (
-                        cursor.rowcount
-                    )
+                deleted["samples"] = (
+                    samples_cursor.rowcount
+                )
+
+                advanced_cursor = con.execute(
+                    """
+                    DELETE FROM advanced_samples
+                    WHERE ts < ?
+                    """,
+                    (cutoff,),
+                )
+
+                deleted["advanced_samples"] = (
+                    advanced_cursor.rowcount
+                )
 
             if alert_days is not None:
                 cutoff = (

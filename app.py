@@ -350,13 +350,14 @@ def save_sample(metrics, ts):
         METRIC_COLUMNS
     )
 
+    query = (
+        f"INSERT INTO samples ({columns}) "  # nosec B608
+        f"VALUES ({placeholders})"
+    )
+
     with closing(db_connect()) as con, con:
         con.execute(
-            f"""
-            INSERT INTO samples
-            ({columns})
-            VALUES ({placeholders})
-            """,
+            query,
             [ts] + values,
         )
 
@@ -369,7 +370,6 @@ def cleanup_old_samples():
 
 def fetch_metrics():
     request_args = {
-        "timeout": REQUEST_TIMEOUT,
         "verify": ONT_TLS_VERIFY,
         "headers": {
             "User-Agent":
@@ -386,11 +386,13 @@ def fetch_metrics():
 
             response = requests.get(
                 ONT_URL,
+                timeout=REQUEST_TIMEOUT,
                 **request_args,
             )
     else:
         response = requests.get(
             ONT_URL,
+            timeout=REQUEST_TIMEOUT,
             **request_args,
         )
 

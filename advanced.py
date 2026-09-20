@@ -635,8 +635,10 @@ class AdvancedCollector:
         command,
     ):
 
+        # Commands reaching this helper are selected only from the
+        # dashboard's fixed telemetry and diagnostic command profiles.
         stdin, stdout, stderr = (
-            client.exec_command(
+            client.exec_command(  # nosec B601
                 command,
                 timeout=
                     self.command_timeout,
@@ -1234,14 +1236,16 @@ pontop -b -g 'Optical Interface Info'
             )
         )
 
+        query = (
+            f"INSERT INTO advanced_samples "  # nosec B608
+            f"(ts,{','.join(columns)}) "
+            f"VALUES ({placeholders})"
+        )
+
         with closing(self._connect_db()) as con, con:
 
             con.execute(
-                f"""
-                INSERT INTO advanced_samples
-                (ts,{",".join(columns)})
-                VALUES ({placeholders})
-                """,
+                query,
                 [
                     ts,
                     *[

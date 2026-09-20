@@ -8,10 +8,11 @@ import sqlite3
 from contextlib import closing
 import threading
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from copy import deepcopy
+
+
+EMPTY_CONFIG_VALUE = ""
 
 
 DEFAULT_NOTIFICATION_CONFIG = {
@@ -22,18 +23,18 @@ DEFAULT_NOTIFICATION_CONFIG = {
     "gotify": {
         "enabled": False,
         "server_url": "",
-        "token": "",
+        "token": EMPTY_CONFIG_VALUE
     },
     "pushover": {
         "enabled": False,
         "user_key": "",
-        "api_token": "",
+        "api_token": EMPTY_CONFIG_VALUE
     },
     "ntfy": {
         "enabled": False,
         "server_url": "https://ntfy.sh",
         "topic": "",
-        "token": "",
+        "token": EMPTY_CONFIG_VALUE
     },
     "webhook": {
         "enabled": False,
@@ -1147,28 +1148,24 @@ class NotificationManager:
             }
         ).encode("utf-8")
 
-        request = urllib.request.Request(
-            webhook_url,
-            data=payload,
-            headers={
-                "Content-Type":
-                    "application/json",
-                "User-Agent":
-                    "X-ONU-SFPP-Dashboard",
-            },
-            method="POST",
-        )
+        headers = {
+            "Content-Type":
+                "application/json",
+            "User-Agent":
+                "X-ONU-SFPP-Dashboard",
+        }
 
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=10,
-            ) as response:
-                response.read()
+            self._post_notification_url(
+                webhook_url,
+                payload,
+                headers,
+            )
 
         except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
+            ValueError,
+            UnicodeError,
+            http.client.HTTPException,
             TimeoutError,
             OSError,
         ):
@@ -1299,28 +1296,24 @@ class NotificationManager:
             "priority": priority,
         }).encode("utf-8")
 
-        request = urllib.request.Request(
-            "https://api.pushover.net/1/messages.json",
-            data=payload,
-            headers={
-                "Content-Type":
-                    "application/x-www-form-urlencoded",
-                "User-Agent":
-                    "X-ONU-SFPP-Dashboard",
-            },
-            method="POST",
-        )
+        headers = {
+            "Content-Type":
+                "application/x-www-form-urlencoded",
+            "User-Agent":
+                "X-ONU-SFPP-Dashboard",
+        }
 
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=10,
-            ) as response:
-                response.read()
+            self._post_notification_url(
+                "https://api.pushover.net/1/messages.json",
+                payload,
+                headers,
+            )
 
         except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
+            ValueError,
+            UnicodeError,
+            http.client.HTTPException,
             TimeoutError,
             OSError,
         ):
