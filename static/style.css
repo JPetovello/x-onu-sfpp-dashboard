@@ -2118,3 +2118,122 @@ footer {
         width: 100%;
     }
 }
+
+
+/* Diagnostics page */
+
+.diagnostics-intro {
+    margin-bottom: 18px;
+    color: var(--muted);
+}
+
+.diagnostics-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 18px;
+}
+
+.diagnostics-profile-control {
+    display: grid;
+    gap: 8px;
+}
+
+.diagnostics-profile-control > .label {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.diagnostics-profile-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.diagnostics-profile-button,
+.diagnostics-run-button {
+    min-height: 40px;
+}
+
+.diagnostics-run-button {
+    font-weight: 700;
+}
+
+.diagnostics-status {
+    min-height: 1.4em;
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.diagnostics-status.good {
+    color: var(--good);
+}
+
+.diagnostics-status.warn {
+    color: var(--warning);
+}
+
+.diagnostics-status.bad {
+    color: var(--bad);
+}
+
+.diagnostics-results-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.diagnostics-results {
+    display: grid;
+    gap: 16px;
+}
+
+.diagnostics-empty {
+    margin: 0;
+    color: var(--muted);
+}
+
+.diagnostics-section {
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--panel-alt);
+}
+
+.diagnostics-section h3 {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+}
+
+.diagnostics-output {
+    max-height: 520px;
+    margin: 0;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: inherit;
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        "Liberation Mono",
+        monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+    .diagnostics-results-head {
+        display: block;
+    }
+
+    .diagnostics-results-head
+    .chart-meta {
+        display: inline-block;
+        margin-top: 6px;
+    }
+}

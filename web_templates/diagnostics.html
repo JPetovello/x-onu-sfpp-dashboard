@@ -59,22 +59,105 @@
 </header>
 
 
-<section class="section-block">
+<section class="section-block diagnostics-control-panel">
 
     <div class="section-title">
+
         <p class="eyebrow">
-            DIAGNOSTICS
+            ON-DEMAND
         </p>
 
         <h2>
             ONT Troubleshooting
         </h2>
+
     </div>
 
-    <p>
-        Low-level troubleshooting and on-demand diagnostic
-        information will be organized on this page.
+    <p class="diagnostics-intro">
+        Diagnostics run only when requested.
+        Normal Dashboard and Advanced polling are unchanged.
     </p>
+
+    <div class="diagnostics-controls">
+
+        <div class="diagnostics-profile-control">
+
+            <span class="label">
+                Diagnostic Profile
+            </span>
+
+            <div class="diagnostics-profile-buttons">
+
+                <button
+                    type="button"
+                    class="diagnostics-profile-button active"
+                    data-diagnostics-profile="overview">
+                    Overview
+                </button>
+
+                <button
+                    type="button"
+                    class="diagnostics-profile-button"
+                    data-diagnostics-profile="counters">
+                    Counters
+                </button>
+
+            </div>
+
+        </div>
+
+        <button
+            type="button"
+            id="diagnosticsRun"
+            class="diagnostics-run-button">
+            Run Diagnostics
+        </button>
+
+    </div>
+
+    <p
+        id="diagnosticsStatus"
+        class="diagnostics-status"
+        aria-live="polite">
+        Select a profile and run diagnostics.
+    </p>
+
+</section>
+
+
+<section class="section-block diagnostics-results-panel">
+
+    <div class="diagnostics-results-head">
+
+        <div class="section-title">
+
+            <p class="eyebrow">
+                RESULTS
+            </p>
+
+            <h2>
+                Diagnostic Output
+            </h2>
+
+        </div>
+
+        <span
+            id="diagnosticsProfileLabel"
+            class="chart-meta">
+            Not run
+        </span>
+
+    </div>
+
+    <div
+        id="diagnosticsResults"
+        class="diagnostics-results">
+
+        <p class="diagnostics-empty">
+            No diagnostics have been run yet.
+        </p>
+
+    </div>
 
 </section>
 
@@ -88,6 +171,8 @@
 </footer>
 
 </main>
+
+<script src="/static/diagnostics.js"></script>
 
 </body>
 </html>
