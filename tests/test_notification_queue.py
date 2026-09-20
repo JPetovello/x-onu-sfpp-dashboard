@@ -124,6 +124,7 @@ class NotificationQueueTests(unittest.TestCase):
         manager._send_gotify = Mock()
         manager._send_ntfy = Mock()
         manager._send_webhook = Mock()
+        manager._send_email = Mock()
 
         with patch(
             "notifications.time.monotonic",
@@ -146,6 +147,7 @@ class NotificationQueueTests(unittest.TestCase):
         manager._send_gotify.assert_not_called()
         manager._send_ntfy.assert_not_called()
         manager._send_webhook.assert_not_called()
+        manager._send_email.assert_not_called()
 
         self.finish_queued(manager)
 
@@ -167,6 +169,7 @@ class NotificationQueueTests(unittest.TestCase):
         manager._send_gotify = Mock()
         manager._send_ntfy = Mock()
         manager._send_webhook = Mock()
+        manager._send_email = Mock()
 
         with patch(
             "notifications.time.monotonic",
@@ -189,6 +192,7 @@ class NotificationQueueTests(unittest.TestCase):
         manager._send_gotify.assert_called_once_with(event)
         manager._send_ntfy.assert_called_once_with(event)
         manager._send_webhook.assert_called_once_with(event)
+        manager._send_email.assert_called_once_with(event)
 
         self.finish_queued(manager)
 

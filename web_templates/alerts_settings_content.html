@@ -1103,6 +1103,71 @@
 
         </div>
 
+
+        <div class="notification-provider-row">
+
+            <div class="notification-provider-heading">
+                <span class="alert-setting-label">
+                    Email (Gmail)
+                </span>
+
+                <label class="notification-enable">
+                    <input
+                        id="notificationEmailEnabled"
+                        type="checkbox">
+
+                    <span>Enabled</span>
+                </label>
+            </div>
+
+            <label class="notification-field">
+                <span>Google account email</span>
+
+                <input
+                    id="notificationEmailUsername"
+                    class="alert-setting-input"
+                    type="email"
+                    autocomplete="off"
+                    placeholder="account@example.com">
+            </label>
+
+            <label class="notification-field">
+                <span>App Password</span>
+
+                <input
+                    id="notificationEmailAppPassword"
+                    class="alert-setting-input"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="Google App Password">
+            </label>
+
+            <label class="notification-secret-clear">
+                <input
+                    id="notificationEmailAppPasswordClear"
+                    type="checkbox">
+                <span>Clear saved App Password</span>
+            </label>
+
+            <label class="notification-field">
+                <span>Recipient email</span>
+
+                <input
+                    id="notificationEmailToAddress"
+                    class="alert-setting-input"
+                    type="email"
+                    autocomplete="off"
+                    placeholder="recipient@example.com">
+            </label>
+
+            <span class="alert-setting-help">
+                Send alerts through Gmail SMTP. A Google
+                App Password is required; do not enter your
+                normal Google account password.
+            </span>
+
+        </div>
+
     </div>
 
 

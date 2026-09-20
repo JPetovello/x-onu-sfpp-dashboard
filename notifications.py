@@ -3,13 +3,17 @@ import ipaddress
 import json
 import os
 import queue
+import re
+import smtplib
 import socket
 import sqlite3
+import ssl
 from contextlib import closing
 import threading
 import time
 import urllib.parse
 from copy import deepcopy
+from email.message import EmailMessage
 
 
 EMPTY_CONFIG_VALUE = ""
@@ -40,6 +44,12 @@ DEFAULT_NOTIFICATION_CONFIG = {
         "enabled": False,
         "url": "",
     },
+    "email": {
+        "enabled": False,
+        "username": "",
+        "app_password": EMPTY_CONFIG_VALUE,
+        "to_address": "",
+    },
 }
 
 NOTIFICATION_CONFIG = deepcopy(
@@ -49,6 +59,9 @@ NOTIFICATION_CONFIG = deepcopy(
 NOTIFICATION_QUEUE_MAXSIZE = 100
 NOTIFICATION_QUEUE_TTL_SECONDS = 30 * 60
 NOTIFICATION_REQUEST_TIMEOUT_SECONDS = 10
+GMAIL_SMTP_HOST = "smtp.gmail.com"
+GMAIL_SMTP_PORT = 465
+GMAIL_SMTP_TIMEOUT_SECONDS = 10
 NOTIFICATION_PRIVATE_ORIGINS_ENV = (
     "NOTIFICATION_PRIVATE_ORIGINS"
 )
@@ -615,6 +628,102 @@ class NotificationManager:
             """)
 
 
+    @staticmethod
+    def _validate_email_address(
+        value,
+        field,
+    ):
+        if any(
+            ord(char) < 0x20
+            or ord(char) == 0x7f
+            for char in value
+        ):
+            raise ValueError(
+                f"{field} contains invalid "
+                "control characters"
+            )
+
+        address = value.strip()
+
+        if (
+            len(address) > 254
+            or address.count("@") != 1
+            or any(char.isspace() for char in address)
+        ):
+            raise ValueError(
+                f"{field} must be a valid email address"
+            )
+
+        local, domain = address.rsplit("@", 1)
+
+        if (
+            not local
+            or len(local) > 64
+            or local.startswith(".")
+            or local.endswith(".")
+            or ".." in local
+            or not re.fullmatch(
+                r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+",
+                local,
+            )
+        ):
+            raise ValueError(
+                f"{field} must be a valid email address"
+            )
+
+        if (
+            not domain
+            or len(domain) > 253
+            or domain.startswith(".")
+            or domain.endswith(".")
+        ):
+            raise ValueError(
+                f"{field} must be a valid email address"
+            )
+
+        labels = domain.split(".")
+
+        if any(
+            not re.fullmatch(
+                r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}"
+                r"[A-Za-z0-9])?",
+                label,
+            )
+            for label in labels
+        ):
+            raise ValueError(
+                f"{field} must be a valid email address"
+            )
+
+
+    @staticmethod
+    def _migrate_config(
+        config,
+    ):
+        if not isinstance(config, dict):
+            return config, False
+
+        expected_providers = set(
+            DEFAULT_NOTIFICATION_CONFIG
+        )
+
+        actual_providers = set(config)
+        legacy_providers = (
+            expected_providers
+            - {"email"}
+        )
+
+        if actual_providers != legacy_providers:
+            return config, False
+
+        migrated = deepcopy(config)
+        migrated["email"] = deepcopy(
+            DEFAULT_NOTIFICATION_CONFIG["email"]
+        )
+
+        return migrated, True
+
+
     def validate_config(
         self,
         config,
@@ -853,6 +962,48 @@ class NotificationManager:
             )
 
 
+        email = config["email"]
+
+        if (
+            email["enabled"]
+            and not email["username"].strip()
+        ):
+            raise ValueError(
+                "email.username is required when "
+                "Email notifications are enabled"
+            )
+
+        if (
+            email["enabled"]
+            and not email["app_password"].strip()
+        ):
+            raise ValueError(
+                "email.app_password is required when "
+                "Email notifications are enabled"
+            )
+
+        if (
+            email["enabled"]
+            and not email["to_address"].strip()
+        ):
+            raise ValueError(
+                "email.to_address is required when "
+                "Email notifications are enabled"
+            )
+
+        if email["username"].strip():
+            self._validate_email_address(
+                email["username"],
+                "email.username",
+            )
+
+        if email["to_address"].strip():
+            self._validate_email_address(
+                email["to_address"],
+                "email.to_address",
+            )
+
+
         return deepcopy(
             config
         )
@@ -912,9 +1063,18 @@ class NotificationManager:
                     row["config_json"]
                 )
 
+                config, migrated = (
+                    self._migrate_config(config)
+                )
+
                 config = self.validate_config(
                     config
                 )
+
+                if migrated:
+                    self._write_config_row(
+                        config
+                    )
 
             except (
                 TypeError,
@@ -923,10 +1083,6 @@ class NotificationManager:
             ):
                 config = deepcopy(
                     DEFAULT_NOTIFICATION_CONFIG
-                )
-
-                self._write_config_row(
-                    config
                 )
 
         with self.lock:
@@ -959,6 +1115,9 @@ class NotificationManager:
             ),
             "webhook": (
                 "url",
+            ),
+            "email": (
+                "app_password",
             ),
         }
 
@@ -1032,6 +1191,9 @@ class NotificationManager:
             ),
             "webhook": (
                 "url",
+            ),
+            "email": (
+                "app_password",
             ),
         }
 
@@ -1537,6 +1699,101 @@ class NotificationManager:
             return
 
 
+    def _send_email(
+        self,
+        event,
+    ):
+        with self.lock:
+            config = deepcopy(
+                NOTIFICATION_CONFIG["email"]
+            )
+
+        if not config["enabled"]:
+            return
+
+        username = config["username"].strip()
+        app_password = config["app_password"].strip()
+        to_address = config["to_address"].strip()
+
+        if (
+            not username
+            or not app_password
+            or not to_address
+        ):
+            return
+
+        severity = str(
+            event.get("severity")
+            or "warning"
+        ).lower()
+
+        safe_severity = {
+            "critical": "CRITICAL",
+            "warning": "WARNING",
+            "info": "INFO",
+        }.get(
+            severity,
+            "WARNING",
+        )
+
+        message_text = str(
+            event.get("message")
+            or "Alert"
+        )
+
+        metric = event.get("metric")
+
+        body_lines = [
+            f"Severity: {safe_severity}",
+            f"Alert: {message_text}",
+        ]
+
+        if (
+            metric is not None
+            and metric != ""
+        ):
+            body_lines.append(
+                f"Metric: {metric}"
+            )
+
+        email_message = EmailMessage()
+        email_message["From"] = username
+        email_message["To"] = to_address
+        email_message["Subject"] = (
+            "X-ONU-SFPP Dashboard - "
+            f"{safe_severity}"
+        )
+        email_message.set_content(
+            "\n".join(body_lines)
+        )
+
+        try:
+            tls_context = ssl.create_default_context()
+
+            with smtplib.SMTP_SSL(
+                GMAIL_SMTP_HOST,
+                GMAIL_SMTP_PORT,
+                timeout=GMAIL_SMTP_TIMEOUT_SECONDS,
+                context=tls_context,
+            ) as smtp:
+                smtp.login(
+                    username,
+                    app_password,
+                )
+                smtp.send_message(
+                    email_message
+                )
+
+        except (
+            ValueError,
+            UnicodeError,
+            smtplib.SMTPException,
+            TimeoutError,
+            OSError,
+        ):
+            return
+
+
 
     def _queued_notification_expired(
         self,
@@ -1585,6 +1842,10 @@ class NotificationManager:
         )
 
         self._send_webhook(
+            event
+        )
+
+        self._send_email(
             event
         )
 

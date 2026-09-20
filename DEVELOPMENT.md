@@ -229,6 +229,7 @@ Supported providers include:
 - Gotify
 - Pushover
 - Generic Webhook
+- Email (Gmail SMTP)
 
 Notification delivery is asynchronous and intentionally isolated from telemetry collection and alert storage.
 
@@ -666,6 +667,7 @@ node tests/test_alert_settings.js
 node tests/test_dashboard_health.js
 node tests/test_alert_rendering.js
 node tests/test_diagnostics_ui.js
+node tests/test_email_notifications.js
 ```
 
 The Diagnostics backend is covered by `tests/test_diagnostics.py`. Those tests must mock SSH execution so routine regression testing cannot contact a real ONT.

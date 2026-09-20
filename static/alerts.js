@@ -1323,6 +1323,26 @@ function renderNotificationConfig(config) {
             "notificationWebhookUrl"
         );
 
+    const emailEnabled =
+        getAlertElement(
+            "notificationEmailEnabled"
+        );
+
+    const emailUsername =
+        getAlertElement(
+            "notificationEmailUsername"
+        );
+
+    const emailAppPassword =
+        getAlertElement(
+            "notificationEmailAppPassword"
+        );
+
+    const emailToAddress =
+        getAlertElement(
+            "notificationEmailToAddress"
+        );
+
     const webhookUrlClear =
         getAlertElement(
             "notificationDiscordWebhookUrlClear"
@@ -1353,6 +1373,11 @@ function renderNotificationConfig(config) {
             "notificationWebhookUrlClear"
         );
 
+    const emailAppPasswordClear =
+        getAlertElement(
+            "notificationEmailAppPasswordClear"
+        );
+
     const status =
         getAlertElement(
             "notificationSettingsStatus"
@@ -1373,12 +1398,17 @@ function renderNotificationConfig(config) {
         || !ntfyToken
         || !customWebhookEnabled
         || !customWebhookUrl
+        || !emailEnabled
+        || !emailUsername
+        || !emailAppPassword
+        || !emailToAddress
         || !webhookUrlClear
         || !pushoverUserKeyClear
         || !pushoverApiTokenClear
         || !gotifyTokenClear
         || !ntfyTokenClear
         || !customWebhookUrlClear
+        || !emailAppPasswordClear
         || !status
     ) {
         return;
@@ -1492,6 +1522,31 @@ function renderNotificationConfig(config) {
 
     customWebhookUrlClear.disabled =
         !config?.webhook?.url_configured;
+
+    emailEnabled.checked =
+        Boolean(
+            config?.email?.enabled
+        );
+
+    emailUsername.value =
+        config?.email?.username
+        || "";
+
+    emailAppPassword.value = "";
+
+    emailAppPassword.placeholder =
+        config?.email?.app_password_configured
+        ? "Configured - leave blank to keep"
+        : "Google App Password";
+
+    emailAppPasswordClear.checked = false;
+
+    emailAppPasswordClear.disabled =
+        !config?.email?.app_password_configured;
+
+    emailToAddress.value =
+        config?.email?.to_address
+        || "";
 
     status.textContent =
         "Settings loaded";
@@ -1619,6 +1674,26 @@ async function saveNotificationConfig() {
             "notificationWebhookUrl"
         );
 
+    const emailEnabled =
+        getAlertElement(
+            "notificationEmailEnabled"
+        );
+
+    const emailUsername =
+        getAlertElement(
+            "notificationEmailUsername"
+        );
+
+    const emailAppPassword =
+        getAlertElement(
+            "notificationEmailAppPassword"
+        );
+
+    const emailToAddress =
+        getAlertElement(
+            "notificationEmailToAddress"
+        );
+
     const webhookUrlClear =
         getAlertElement(
             "notificationDiscordWebhookUrlClear"
@@ -1649,6 +1724,11 @@ async function saveNotificationConfig() {
             "notificationWebhookUrlClear"
         );
 
+    const emailAppPasswordClear =
+        getAlertElement(
+            "notificationEmailAppPasswordClear"
+        );
+
     if (
         !currentNotificationConfig
         || !enabled
@@ -1665,12 +1745,17 @@ async function saveNotificationConfig() {
         || !ntfyToken
         || !customWebhookEnabled
         || !customWebhookUrl
+        || !emailEnabled
+        || !emailUsername
+        || !emailAppPassword
+        || !emailToAddress
         || !webhookUrlClear
         || !pushoverUserKeyClear
         || !pushoverApiTokenClear
         || !gotifyTokenClear
         || !ntfyTokenClear
         || !customWebhookUrlClear
+        || !emailAppPasswordClear
     ) {
         if (status) {
             status.textContent =
@@ -1784,6 +1869,27 @@ async function saveNotificationConfig() {
             : Boolean(
                 config.webhook.url_configured
             );
+
+        config.email.enabled =
+            emailEnabled.checked;
+
+        config.email.username =
+            emailUsername.value.trim();
+
+        config.email.app_password =
+            emailAppPasswordClear.checked
+            ? ""
+            : emailAppPassword.value.trim();
+
+        config.email.app_password_configured =
+            emailAppPasswordClear.checked
+            ? false
+            : Boolean(
+                config.email.app_password_configured
+            );
+
+        config.email.to_address =
+            emailToAddress.value.trim();
 
         if (status) {
             status.textContent =
