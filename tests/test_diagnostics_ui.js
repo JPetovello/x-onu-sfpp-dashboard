@@ -77,6 +77,39 @@ function createHarness(
         "counters";
 
 
+    const datapathButton =
+        fakeElement("button");
+
+    datapathButton.dataset
+        .diagnosticsProfile =
+        "datapath";
+
+
+    const ppv4Button =
+        fakeElement("button");
+
+    ppv4Button.dataset
+        .diagnosticsProfile =
+        "ppv4";
+
+
+    const burstButton =
+        fakeElement("button");
+
+    burstButton.dataset
+        .diagnosticsProfile =
+        "burst";
+
+
+    const profileButtons = [
+        overviewButton,
+        countersButton,
+        datapathButton,
+        ppv4Button,
+        burstButton,
+    ];
+
+
     const elements = {
         diagnosticsRun:
             fakeElement("button"),
@@ -125,10 +158,7 @@ function createHarness(
                     ===
                     "[data-diagnostics-profile]"
                 ) {
-                    return [
-                        overviewButton,
-                        countersButton,
-                    ];
+                    return profileButtons;
                 }
 
                 return [];
@@ -166,7 +196,41 @@ function createHarness(
         fetchCalls,
         overviewButton,
         countersButton,
+        datapathButton,
+        ppv4Button,
+        burstButton,
+        profileButtons,
     };
+}
+
+
+{
+    const harness =
+        createHarness(
+            () => {
+                throw new Error(
+                    "selecting must not fetch"
+                );
+            }
+        );
+
+    for (const profile of [
+        "datapath",
+        "ppv4",
+        "burst",
+    ]) {
+        assert.equal(
+            harness.context
+                .xonuDiagnostics
+                .setSelectedProfile(profile),
+            true
+        );
+    }
+
+    assert.equal(
+        harness.fetchCalls.length,
+        0
+    );
 }
 
 
@@ -262,11 +326,11 @@ function createHarness(
                         enabled: true,
                         online: true,
                         profile:
-                            "counters",
+                            "ppv4",
                         error: null,
                         sections: {
-                            PLOAM_UPSTREAM:
-                                "Counter : 42",
+                            PPV4_TREE:
+                                "<tree>raw</tree>",
                         },
                     };
                 },
@@ -278,7 +342,7 @@ function createHarness(
         harness.context
             .xonuDiagnostics
             .setSelectedProfile(
-                "counters"
+                "ppv4"
             ),
         true
     );
@@ -297,14 +361,35 @@ function createHarness(
     assert.equal(
         harness.fetchCalls[0].url,
         "/api/diagnostics"
-        + "?profile=counters"
+    );
+
+    assert.equal(
+        harness.fetchCalls[0]
+            .options.method,
+        "POST"
+    );
+
+    assert.equal(
+        harness.fetchCalls[0]
+            .options.headers[
+                "Content-Type"
+            ],
+        "application/json"
+    );
+
+    assert.deepEqual(
+        JSON.parse(
+            harness.fetchCalls[0]
+                .options.body
+        ),
+        {profile: "ppv4"}
     );
 
     assert.equal(
         harness.elements
             .diagnosticsStatus
             .textContent,
-        "Counters diagnostics complete."
+        "PPv4 diagnostics complete."
     );
 
     assert.equal(
@@ -318,7 +403,7 @@ function createHarness(
         harness.elements
             .diagnosticsProfileLabel
             .textContent,
-        "Counters"
+        "PPv4"
     );
 
 
@@ -330,14 +415,34 @@ function createHarness(
     assert.equal(
         article.childNodes[0]
             .textContent,
-        "PLOAM Upstream Counters"
+        "PPv4 Tree"
     );
 
     assert.equal(
         article.childNodes[1]
             .textContent,
-        "Counter : 42"
+        "<tree>raw</tree>"
     );
+
+    assert.equal(
+        article.childNodes[1]
+            .childNodes.length,
+        0
+    );
+
+    assert.equal(
+        harness.elements
+            .diagnosticsRun.disabled,
+        false
+    );
+
+    for (const button of
+        harness.profileButtons) {
+        assert.equal(
+            button.disabled,
+            false
+        );
+    }
 })()
 .then(async () => {
     const harness =
@@ -384,6 +489,84 @@ function createHarness(
         harness.elements
             .diagnosticsRun
             .disabled,
+        false
+    );
+
+    for (const button of
+        harness.profileButtons) {
+        assert.equal(
+            button.disabled,
+            false
+        );
+    }
+})
+.then(async () => {
+    const harness =
+        createHarness(
+            async () => ({
+                ok: false,
+                status: 409,
+
+                async json() {
+                    return {
+                        error:
+                            "Diagnostics are already running",
+                    };
+                },
+            })
+        );
+
+    await harness.context
+        .xonuDiagnostics
+        .runDiagnostics();
+
+    assert.equal(
+        harness.elements
+            .diagnosticsStatus
+            .textContent,
+        "Diagnostics are already running"
+    );
+
+    assert.equal(
+        harness.elements
+            .diagnosticsStatus
+            .className,
+        "diagnostics-status warn"
+    );
+
+    assert.equal(
+        harness.elements
+            .diagnosticsRun.disabled,
+        false
+    );
+})
+.then(async () => {
+    const harness =
+        createHarness(
+            async () => ({
+                ok: true,
+                status: 200,
+
+                async json() {
+                    return "not an object";
+                },
+            })
+        );
+
+    await harness.context
+        .xonuDiagnostics
+        .runDiagnostics();
+
+    assert.equal(
+        harness.elements
+            .diagnosticsStatus
+            .textContent,
+        "Diagnostics failed: The server returned an invalid response"
+    );
+
+    assert.equal(
+        harness.elements
+            .diagnosticsRun.disabled,
         false
     );
 })

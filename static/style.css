@@ -2130,19 +2130,42 @@ footer {
 .diagnostics-controls {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     gap: 18px;
+    margin-top: 18px;
+}
+
+.diagnostics-profile-groups {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
 }
 
 .diagnostics-profile-control {
     display: grid;
-    gap: 8px;
+    align-content: start;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel-alt);
 }
 
-.diagnostics-profile-control > .label {
+.diagnostics-profile-control h3 {
+    margin: 0 0 5px;
+    font-size: 0.95rem;
+}
+
+.diagnostics-profile-control p {
+    margin: 0;
     color: var(--muted);
-    font-size: 0.82rem;
-    font-weight: 600;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.diagnostics-expert-control {
+    border-color: var(--warning);
 }
 
 .diagnostics-profile-buttons {
@@ -2236,4 +2259,165 @@ footer {
         display: inline-block;
         margin-top: 6px;
     }
+}
+
+
+/* Active primary page navigation */
+
+.settings-nav-link[aria-current="page"] {
+    color:
+        var(--button-active-text);
+
+    border-color:
+        var(--button-active-border);
+
+    background:
+        var(--button-active-bg);
+}
+
+/* Alerts & Notifications final visual polish */
+
+#alertSettingsPanel
+.alert-settings-grid,
+#alertSettingsPanel
+.alert-state-settings {
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+
+    gap: 12px;
+}
+
+
+#alertSettingsPanel
+.alert-setting-card {
+    padding: 18px;
+
+    border-radius: 15px;
+
+    background:
+        var(--surface-soft);
+}
+
+
+#alertSettingsPanel
+.alert-threshold-list {
+    gap: 10px;
+}
+
+
+#alertSettingsPanel
+.alert-counter-section {
+    margin-top: 24px;
+
+    padding-top: 20px;
+}
+
+
+#alertSettingsPanel
+.alert-counter-table {
+    border-radius: 14px;
+
+    background:
+        var(--surface-soft);
+}
+
+
+#alertSettingsPanel
+.alert-counter-row {
+    padding:
+        13px 14px;
+}
+
+
+#notificationSettingsPanel
+.notification-settings-stack {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+
+    gap: 12px;
+
+    align-items: start;
+
+    margin-top: 14px;
+}
+
+
+#notificationSettingsPanel
+.notification-provider-row,
+#notificationSettingsPanel
+.notification-provider-row:first-child,
+#notificationSettingsPanel
+.notification-provider-row:last-child {
+    min-width: 0;
+
+    padding: 18px;
+
+    border:
+        1px solid
+        var(--line);
+
+    border-radius:
+        15px;
+
+    background:
+        var(--surface-soft);
+}
+
+
+#notificationSettingsPanel
+.notification-provider-row
+.notification-field,
+#notificationSettingsPanel
+.notification-provider-row
+.alert-setting-help {
+    max-width: none;
+}
+
+
+#notificationSettingsPanel
+.notification-provider-heading {
+    padding-bottom: 2px;
+}
+
+
+#notificationSettingsPanel
+.notification-field {
+    margin-top: 12px;
+}
+
+
+#notificationSettingsPanel
+.notification-secret-clear {
+    margin-top: 8px;
+}
+
+
+#notificationSettingsPanel
+.notification-provider-row
+.alert-setting-help {
+    margin-top: 12px;
+}
+
+
+@media
+(max-width: 800px) {
+
+    #alertSettingsPanel
+    .alert-settings-grid,
+    #alertSettingsPanel
+    .alert-state-settings,
+    #notificationSettingsPanel
+    .notification-settings-stack {
+        grid-template-columns:
+            1fr;
+    }
+
 }

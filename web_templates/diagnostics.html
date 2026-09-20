@@ -78,13 +78,19 @@
         Normal Dashboard and Advanced polling are unchanged.
     </p>
 
-    <div class="diagnostics-controls">
+    <div class="diagnostics-profile-groups">
 
         <div class="diagnostics-profile-control">
 
-            <span class="label">
-                Diagnostic Profile
-            </span>
+            <div>
+                <h3>
+                    Standard Diagnostics
+                </h3>
+
+                <p>
+                    Common status and counter views.
+                </p>
+            </div>
 
             <div class="diagnostics-profile-buttons">
 
@@ -105,6 +111,50 @@
             </div>
 
         </div>
+
+        <div class="diagnostics-profile-control diagnostics-expert-control">
+
+            <div>
+                <h3>
+                    Expert Diagnostics
+                </h3>
+
+                <p>
+                    Deeper troubleshooting views that may produce
+                    substantially more technical raw output.
+                </p>
+            </div>
+
+            <div class="diagnostics-profile-buttons">
+
+                <button
+                    type="button"
+                    class="diagnostics-profile-button"
+                    data-diagnostics-profile="datapath">
+                    Datapath
+                </button>
+
+                <button
+                    type="button"
+                    class="diagnostics-profile-button"
+                    data-diagnostics-profile="ppv4">
+                    PPv4
+                </button>
+
+                <button
+                    type="button"
+                    class="diagnostics-profile-button"
+                    data-diagnostics-profile="burst">
+                    Burst Profile
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="diagnostics-controls">
 
         <button
             type="button"

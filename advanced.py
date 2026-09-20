@@ -112,6 +112,7 @@ class AdvancedCollector:
         )
 
         self.lock = threading.Lock()
+        self.diagnostics_lock = threading.Lock()
 
         self.state = {
             "enabled": self.enabled,
@@ -1277,6 +1278,53 @@ pontop -b -g 'Optical Interface Info'
             )
 
 
+    @staticmethod
+    def _bound_diagnostic_sections(
+        sections,
+        max_section_chars=200_000,
+        max_total_chars=1_000_000,
+    ):
+        """Bound transient diagnostic output without changing collection."""
+
+        marker = (
+            "\n[output truncated by "
+            "X-ONU-SFPP Dashboard]"
+        )
+
+        bounded = {}
+        remaining = max_total_chars
+
+        items = list(sections.items())
+
+        for index, (name, output) in enumerate(
+            items
+        ):
+            text = str(output)
+            sections_left = len(items) - index
+            limit = min(
+                max_section_chars,
+                remaining // sections_left,
+            )
+
+            if len(text) > limit:
+                keep = max(
+                    0,
+                    limit - len(marker),
+                )
+
+                text = (
+                    text[:keep] + marker
+                )[:limit]
+
+            bounded[name] = text
+            remaining = max(
+                0,
+                remaining - len(text),
+            )
+
+        return bounded
+
+
     def diagnostics(
         self,
         profile="overview",
@@ -1291,6 +1339,7 @@ pontop -b -g 'Optical Interface Info'
 
         profiles = {
             "overview": r"""
+set -e
 echo __XONU_STATUS__
 pontop -b -g s
 
@@ -1310,6 +1359,7 @@ echo __XONU_OPTICAL_INFO__
 pontop -b -g 'Optical Interface Info'
 """,
             "counters": r"""
+set -e
 echo __XONU_ALLOCATION_COUNTERS__
 pontop -b -g 'Allocation Counters'
 
@@ -1318,6 +1368,42 @@ pontop -b -g 'PLOAM Downstream Counters'
 
 echo __XONU_PLOAM_UPSTREAM__
 pontop -b -g 'PLOAM Upstream Counters'
+""",
+            "datapath": r"""
+set -e
+echo __XONU_CQM_OFSC__
+pontop -b -g 'CQM ofsc'
+
+echo __XONU_CQM_QUEUE_MAP__
+pontop -b -g 'CQM Queue Map'
+
+echo __XONU_DATAPATH_PORTS__
+pontop -b -g 'Datapath Ports'
+
+echo __XONU_DATAPATH_QOS__
+pontop -b -g 'Datapath QOS'
+""",
+            "ppv4": r"""
+set -e
+echo __XONU_PPV4_BUFFER_MGR_HW_STATS__
+pontop -b -g 'PPv4 Buffer MGR HW Stats'
+
+echo __XONU_PPV4_QOS_QUEUE_PPS__
+pontop -b -g 'PPv4 QoS Queue PPS'
+
+echo __XONU_PPV4_QUEUES_STATS__
+pontop -b -g 'PPv4 Queues Stats'
+
+echo __XONU_PPV4_TREE__
+pontop -b -g 'PPv4 Tree'
+
+echo __XONU_PPV4_QSTATS__
+pontop -b -g 'PPv4 QStats'
+""",
+            "burst": r"""
+set -e
+echo __XONU_DEBUG_BURST_PROFILE__
+pontop -b -g 'Debug Burst Profile'
 """,
         }
 
@@ -1334,9 +1420,24 @@ pontop -b -g 'PLOAM Upstream Counters'
             return {
                 "enabled": False,
                 "online": False,
+                "busy": False,
                 "profile": profile,
                 "error": (
                     "Advanced SSH telemetry is disabled"
+                ),
+                "sections": {},
+            }
+
+        if not self.diagnostics_lock.acquire(
+            blocking=False
+        ):
+            return {
+                "enabled": True,
+                "online": False,
+                "busy": True,
+                "profile": profile,
+                "error": (
+                    "Diagnostics are already running"
                 ),
                 "sections": {},
             }
@@ -1355,9 +1456,16 @@ pontop -b -g 'PLOAM Upstream Counters'
                 output
             )
 
+            sections = (
+                self._bound_diagnostic_sections(
+                    sections
+                )
+            )
+
             return {
                 "enabled": True,
                 "online": True,
+                "busy": False,
                 "profile": profile,
                 "error": None,
                 "sections": sections,
@@ -1367,6 +1475,7 @@ pontop -b -g 'PLOAM Upstream Counters'
             return {
                 "enabled": True,
                 "online": False,
+                "busy": False,
                 "profile": profile,
                 "error": (
                     f"{type(exc).__name__}: "
@@ -1376,8 +1485,18 @@ pontop -b -g 'PLOAM Upstream Counters'
             }
 
         finally:
-            if client is not None:
-                client.close()
+            try:
+                if client is not None:
+                    try:
+                        client.close()
+                    except Exception as close_exc:
+                        print(
+                            "Diagnostic SSH client close failed: "
+                            f"{type(close_exc).__name__}: "
+                            f"{close_exc}"
+                        )
+            finally:
+                self.diagnostics_lock.release()
 
 
     def collect_once(self):

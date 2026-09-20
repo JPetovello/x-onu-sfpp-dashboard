@@ -2,7 +2,10 @@
     const allowedProfiles =
         new Set([
             "overview",
-            "counters"
+            "counters",
+            "datapath",
+            "ppv4",
+            "burst"
         ]);
 
 
@@ -24,12 +27,29 @@
             "PLOAM Downstream Counters",
         PLOAM_UPSTREAM:
             "PLOAM Upstream Counters",
+        CQM_OFSC: "CQM ofsc",
+        CQM_QUEUE_MAP: "CQM Queue Map",
+        DATAPATH_PORTS: "Datapath Ports",
+        DATAPATH_QOS: "Datapath QOS",
+        PPV4_BUFFER_MGR_HW_STATS:
+            "PPv4 Buffer MGR HW Stats",
+        PPV4_QOS_QUEUE_PPS:
+            "PPv4 QoS Queue PPS",
+        PPV4_QUEUES_STATS:
+            "PPv4 Queues Stats",
+        PPV4_TREE: "PPv4 Tree",
+        PPV4_QSTATS: "PPv4 QStats",
+        DEBUG_BURST_PROFILE:
+            "Debug Burst Profile",
     };
 
 
     const profileLabels = {
         overview: "Overview",
         counters: "Counters",
+        datapath: "Datapath",
+        ppv4: "PPv4",
+        burst: "Burst Profile",
     };
 
 
@@ -286,16 +306,19 @@
         try {
             const response =
                 await fetch(
-                    "/api/diagnostics"
-                    + "?profile="
-                    + encodeURIComponent(
-                        selectedProfile
-                    ),
+                    "/api/diagnostics",
                     {
+                        method: "POST",
                         headers: {
                             Accept:
                                 "application/json",
+                            "Content-Type":
+                                "application/json",
                         },
+                        body: JSON.stringify({
+                            profile:
+                                selectedProfile,
+                        }),
                     }
                 );
 
@@ -306,17 +329,50 @@
                 payload =
                     await response.json();
             } catch (error) {
-                payload = {};
+                throw new Error(
+                    "The server returned an invalid response"
+                );
             }
 
 
             if (!response.ok) {
+                if (response.status === 409) {
+                    setStatus(
+                        payload
+                        && payload.error
+                        || "Diagnostics are already running.",
+                        "warn"
+                    );
+
+                    emptyResults(
+                        "Wait for the active diagnostic request to finish, then try again."
+                    );
+
+                    return;
+                }
+
                 throw new Error(
-                    payload.error
+                    payload
+                    && payload.error
                     || (
                         "Diagnostics request failed "
                         + `(${response.status})`
                     )
+                );
+            }
+
+
+            if (
+                !payload
+                || typeof payload !== "object"
+                || typeof payload.enabled !== "boolean"
+                || typeof payload.online !== "boolean"
+                || !payload.sections
+                || typeof payload.sections !== "object"
+                || Array.isArray(payload.sections)
+            ) {
+                throw new Error(
+                    "The server returned an invalid response"
                 );
             }
 

@@ -916,16 +916,26 @@ The Diagnostics page at `/diagnostics` is intended for explicit troubleshooting:
 
 Diagnostics are **on-demand only**. Opening the page does not run SSH commands.
 
-The current diagnostic profiles are:
+Standard Diagnostics profiles are:
 
 - **Overview** — ONT status, capability/configuration, LAN interface status and counters, active alarms, optical interface status, and optical interface information.
 - **Counters** — allocation counters and upstream/downstream PLOAM counters.
+
+Expert Diagnostics profiles expose deeper troubleshooting pages:
+
+- **Datapath** — raw CQM offload, CQM queue-map, Datapath Ports, and Datapath QoS views.
+- **PPv4** — raw buffer-manager, queue-rate, queue-statistics, tree, and QStats views.
+- **Burst Profile** — raw Debug Burst Profile output.
+
+Expert output is intentionally presented as raw technical information. The dashboard does not assign health grades or inferred alarm meanings to these undocumented fields.
 
 The user explicitly selects a profile and chooses **Run Diagnostics** before a diagnostic request is made.
 
 Diagnostic commands are fixed by the application. The browser cannot submit an arbitrary shell or `pontop` command.
 
 Diagnostic output is returned to the requesting browser and is not added to telemetry history or fed into alert processing.
+
+Only one diagnostic operation runs at a time per dashboard process. If another request is already active, the later request fails quickly with a non-fatal busy message instead of waiting or starting another SSH workload.
 
 Diagnostics require optional SSH telemetry to be configured.
 

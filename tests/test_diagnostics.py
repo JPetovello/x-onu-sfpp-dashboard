@@ -18,6 +18,9 @@ class DiagnosticsCollectorTests(unittest.TestCase):
         )
 
         collector.enabled = enabled
+        collector.diagnostics_lock = (
+            threading.Lock()
+        )
 
         return collector
 
@@ -76,12 +79,16 @@ Vendor name : Example
             "pontop -b -g 'Optical Interface Info'",
         )
 
-        for expected in expected_commands:
-            with self.subTest(command=expected):
-                self.assertIn(
-                    expected,
-                    command,
-                )
+        actual_commands = tuple(
+            line.strip()
+            for line in command.splitlines()
+            if line.strip().startswith("pontop ")
+        )
+
+        self.assertEqual(
+            actual_commands,
+            expected_commands,
+        )
 
         self.assertNotIn(
             "Allocation Counters",
@@ -173,12 +180,16 @@ Upstream counter : 3
             "pontop -b -g 'PLOAM Upstream Counters'",
         )
 
-        for expected in expected_commands:
-            with self.subTest(command=expected):
-                self.assertIn(
-                    expected,
-                    command,
-                )
+        actual_commands = tuple(
+            line.strip()
+            for line in command.splitlines()
+            if line.strip().startswith("pontop ")
+        )
+
+        self.assertEqual(
+            actual_commands,
+            expected_commands,
+        )
 
         self.assertNotIn(
             "LAN Interface Status & Counters",
@@ -210,6 +221,127 @@ Upstream counter : 3
         )
 
         client.close.assert_called_once_with()
+
+    def test_expert_profiles_use_only_fixed_allowlisted_commands(self):
+        cases = {
+            "datapath": (
+                "pontop -b -g 'CQM ofsc'",
+                "pontop -b -g 'CQM Queue Map'",
+                "pontop -b -g 'Datapath Ports'",
+                "pontop -b -g 'Datapath QOS'",
+            ),
+            "ppv4": (
+                "pontop -b -g 'PPv4 Buffer MGR HW Stats'",
+                "pontop -b -g 'PPv4 QoS Queue PPS'",
+                "pontop -b -g 'PPv4 Queues Stats'",
+                "pontop -b -g 'PPv4 Tree'",
+                "pontop -b -g 'PPv4 QStats'",
+            ),
+            "burst": (
+                "pontop -b -g 'Debug Burst Profile'",
+            ),
+        }
+
+        for profile, expected_commands in cases.items():
+            with self.subTest(profile=profile):
+                collector = self._collector()
+                client = mock.Mock()
+
+                with (
+                    mock.patch.object(
+                        collector,
+                        "_ssh_client",
+                        return_value=client,
+                    ),
+                    mock.patch.object(
+                        collector,
+                        "_exec",
+                        return_value=(
+                            "__XONU_TEST__\nraw output"
+                        ),
+                    ) as exec_mock,
+                ):
+                    result = collector.diagnostics(
+                        profile
+                    )
+
+                command = exec_mock.call_args.args[1]
+                actual_commands = tuple(
+                    line.strip()
+                    for line in command.splitlines()
+                    if line.strip().startswith(
+                        "pontop "
+                    )
+                )
+
+                self.assertEqual(
+                    actual_commands,
+                    expected_commands,
+                )
+                self.assertTrue(result["online"])
+                self.assertEqual(
+                    result["profile"],
+                    profile,
+                )
+                client.close.assert_called_once_with()
+
+    def test_all_profiles_enable_shell_fail_fast(self):
+        for profile in (
+            "overview",
+            "counters",
+            "datapath",
+            "ppv4",
+            "burst",
+        ):
+            with self.subTest(profile=profile):
+                collector = self._collector()
+                client = mock.Mock()
+
+                with (
+                    mock.patch.object(
+                        collector,
+                        "_ssh_client",
+                        return_value=client,
+                    ),
+                    mock.patch.object(
+                        collector,
+                        "_exec",
+                        return_value=(
+                            "__XONU_TEST__\nraw output"
+                        ),
+                    ) as exec_mock,
+                ):
+                    result = collector.diagnostics(
+                        profile
+                    )
+
+                command = (
+                    exec_mock
+                    .call_args
+                    .args[1]
+                )
+
+                command_lines = [
+                    line.strip()
+                    for line
+                    in command.splitlines()
+                    if line.strip()
+                ]
+
+                self.assertGreater(
+                    len(command_lines),
+                    1,
+                )
+
+                self.assertEqual(
+                    command_lines[0],
+                    "set -e",
+                )
+
+                self.assertTrue(
+                    result["online"]
+                )
+
 
     def test_unknown_profile_is_rejected_before_ssh(self):
         collector = self._collector()
@@ -332,6 +464,203 @@ Upstream counter : 3
             result["error"],
         )
 
+    def test_concurrency_guard_rejects_second_request(self):
+        collector = self._collector()
+        client = mock.Mock()
+        entered = threading.Event()
+        release = threading.Event()
+        first_result = {}
+
+        def blocking_exec(*_args):
+            entered.set()
+            self.assertTrue(
+                release.wait(timeout=2)
+            )
+            return "__XONU_STATUS__\nready"
+
+        def first_request():
+            first_result.update(
+                collector.diagnostics("overview")
+            )
+
+        with (
+            mock.patch.object(
+                collector,
+                "_ssh_client",
+                return_value=client,
+            ),
+            mock.patch.object(
+                collector,
+                "_exec",
+                side_effect=blocking_exec,
+            ),
+        ):
+            thread = threading.Thread(
+                target=first_request
+            )
+            thread.start()
+            self.assertTrue(
+                entered.wait(timeout=2)
+            )
+
+            second = collector.diagnostics(
+                "counters"
+            )
+
+            release.set()
+            thread.join(timeout=2)
+
+        self.assertFalse(thread.is_alive())
+        self.assertTrue(first_result["online"])
+        self.assertTrue(second["busy"])
+        self.assertFalse(second["online"])
+        self.assertIn(
+            "already running",
+            second["error"],
+        )
+
+    def test_concurrency_guard_is_released_after_failure(self):
+        collector = self._collector()
+        client = mock.Mock()
+
+        with (
+            mock.patch.object(
+                collector,
+                "_ssh_client",
+                return_value=client,
+            ),
+            mock.patch.object(
+                collector,
+                "_exec",
+                side_effect=[
+                    RuntimeError("synthetic failure"),
+                    "__XONU_STATUS__\nrecovered",
+                ],
+            ),
+        ):
+            failed = collector.diagnostics(
+                "overview"
+            )
+            recovered = collector.diagnostics(
+                "overview"
+            )
+
+        self.assertFalse(failed["online"])
+        self.assertFalse(failed["busy"])
+        self.assertTrue(recovered["online"])
+        self.assertFalse(recovered["busy"])
+
+    def test_client_close_failure_is_contained_and_guard_released(self):
+        collector = self._collector()
+        client = mock.Mock()
+
+        client.close.side_effect = RuntimeError(
+            "synthetic close failure"
+        )
+
+        with (
+            mock.patch.object(
+                collector,
+                "_ssh_client",
+                return_value=client,
+            ),
+            mock.patch.object(
+                collector,
+                "_exec",
+                side_effect=[
+                    "__XONU_STATUS__\nfirst",
+                    "__XONU_STATUS__\nsecond",
+                ],
+            ),
+            mock.patch(
+                "builtins.print"
+            ) as print_mock,
+        ):
+            first = collector.diagnostics(
+                "overview"
+            )
+
+            second = collector.diagnostics(
+                "overview"
+            )
+
+        self.assertTrue(first["online"])
+        self.assertFalse(first["busy"])
+
+        self.assertTrue(second["online"])
+        self.assertFalse(second["busy"])
+
+        self.assertEqual(
+            client.close.call_count,
+            2,
+        )
+
+        print_mock.assert_called()
+
+
+    def test_diagnostics_do_not_persist_or_process_alerts(self):
+        collector = self._collector()
+        collector.alert_manager = mock.Mock()
+        client = mock.Mock()
+
+        with (
+            mock.patch.object(
+                collector,
+                "_ssh_client",
+                return_value=client,
+            ),
+            mock.patch.object(
+                collector,
+                "_exec",
+                return_value=(
+                    "__XONU_STATUS__\nraw"
+                ),
+            ),
+            mock.patch.object(
+                collector,
+                "_connect_db",
+            ) as database_mock,
+        ):
+            result = collector.diagnostics(
+                "overview"
+            )
+
+        self.assertTrue(result["online"])
+        database_mock.assert_not_called()
+        collector.alert_manager.assert_not_called()
+        self.assertEqual(
+            collector.alert_manager.method_calls,
+            [],
+        )
+
+    def test_diagnostic_output_is_bounded_and_marked(self):
+        sections = {
+            "FIRST": "A" * 100,
+            "SECOND": "B" * 100,
+        }
+
+        bounded = (
+            AdvancedCollector
+            ._bound_diagnostic_sections(
+                sections,
+                max_section_chars=60,
+                max_total_chars=120,
+            )
+        )
+
+        self.assertIn(
+            "output truncated",
+            bounded["FIRST"],
+        )
+        self.assertIn(
+            "output truncated",
+            bounded["SECOND"],
+        )
+        self.assertLessEqual(
+            sum(map(len, bounded.values())),
+            120,
+        )
+
 
 class DiagnosticsApiTests(unittest.TestCase):
 
@@ -400,9 +729,12 @@ class DiagnosticsApiTests(unittest.TestCase):
             collector,
             "diagnostics",
         ) as diagnostics_mock:
-            response = self.client.get(
-                "/api/diagnostics"
-                "?profile=arbitrary-command"
+            response = self.client.post(
+                "/api/diagnostics",
+                json={
+                    "profile":
+                        "arbitrary-command",
+                },
             )
 
         self.assertEqual(
@@ -420,88 +752,222 @@ class DiagnosticsApiTests(unittest.TestCase):
 
         diagnostics_mock.assert_not_called()
 
-    def test_overview_api_routes_to_collector(self):
+    def test_each_valid_api_profile_routes_to_collector(self):
         collector = (
             self.app_module
             .advanced_collector
         )
 
+        for profile in (
+            "overview",
+            "counters",
+            "datapath",
+            "ppv4",
+            "burst",
+        ):
+            with self.subTest(profile=profile):
+                payload = {
+                    "enabled": True,
+                    "online": True,
+                    "busy": False,
+                    "profile": profile,
+                    "error": None,
+                    "sections": {
+                        "TEST": "synthetic",
+                    },
+                }
+
+                with mock.patch.object(
+                    collector,
+                    "diagnostics",
+                    return_value=payload,
+                ) as diagnostics_mock:
+                    response = self.client.post(
+                        "/api/diagnostics",
+                        json={
+                            "profile": profile,
+                        },
+                    )
+
+                self.assertEqual(
+                    response.status_code,
+                    200,
+                )
+                self.assertEqual(
+                    response.get_json(),
+                    payload,
+                )
+                diagnostics_mock.assert_called_once_with(
+                    profile
+                )
+
+    def test_missing_or_invalid_json_returns_400(self):
+        collector = (
+            self.app_module
+            .advanced_collector
+        )
+
+        cases = (
+            {},
+            {"data": "not json"},
+            {"json": None},
+            {"json": []},
+            {"json": {}},
+            {"json": {"profile": 42}},
+            {
+                "json": {
+                    "profile": "overview",
+                    "command": "arbitrary",
+                },
+            },
+        )
+
+        for kwargs in cases:
+            with self.subTest(kwargs=kwargs):
+                with mock.patch.object(
+                    collector,
+                    "diagnostics",
+                ) as diagnostics_mock:
+                    response = self.client.post(
+                        "/api/diagnostics",
+                        **kwargs,
+                    )
+
+                self.assertEqual(
+                    response.status_code,
+                    400,
+                )
+                diagnostics_mock.assert_not_called()
+
+    def test_diagnostics_requires_json_content_type_and_valid_json(self):
+        collector = (
+            self.app_module
+            .advanced_collector
+        )
+
+        cases = (
+            {
+                "data":
+                    '{"profile":"overview"}',
+                "content_type":
+                    "text/plain",
+            },
+            {
+                "data":
+                    '{"profile":',
+                "content_type":
+                    "application/json",
+            },
+        )
+
+        for request_kwargs in cases:
+            with self.subTest(
+                request_kwargs=request_kwargs
+            ):
+                with mock.patch.object(
+                    collector,
+                    "diagnostics",
+                ) as diagnostics_mock:
+                    response = self.client.post(
+                        "/api/diagnostics",
+                        **request_kwargs,
+                    )
+
+                self.assertEqual(
+                    response.status_code,
+                    400,
+                )
+
+                diagnostics_mock.assert_not_called()
+
+
+    def test_get_does_not_execute_diagnostics(self):
+        collector = (
+            self.app_module
+            .advanced_collector
+        )
+
+        with mock.patch.object(
+            collector,
+            "diagnostics",
+        ) as diagnostics_mock:
+            response = self.client.get(
+                "/api/diagnostics"
+            )
+
+        self.assertEqual(
+            response.status_code,
+            405,
+        )
+        diagnostics_mock.assert_not_called()
+
+    def test_diagnostics_post_requires_authentication_before_collector(self):
+        collector = (
+            self.app_module
+            .advanced_collector
+        )
+
+        with (
+            mock.patch.multiple(
+                self.app_module,
+                DASHBOARD_AUTH_USERNAME="admin",
+                DASHBOARD_AUTH_PASSWORD="correct-secret",
+            ),
+            mock.patch.object(
+                collector,
+                "diagnostics",
+            ) as diagnostics_mock,
+        ):
+            response = self.client.post(
+                "/api/diagnostics",
+                json={
+                    "profile": "overview",
+                },
+            )
+
+        self.assertEqual(
+            response.status_code,
+            401,
+        )
+
+        self.assertIn(
+            "Basic realm=",
+            response.headers[
+                "WWW-Authenticate"
+            ],
+        )
+
+        diagnostics_mock.assert_not_called()
+
+
+    def test_busy_api_result_returns_409(self):
+        collector = (
+            self.app_module
+            .advanced_collector
+        )
         payload = {
             "enabled": True,
-            "online": True,
-            "profile": "overview",
-            "error": None,
-            "sections": {
-                "STATUS": "synthetic status",
-            },
+            "online": False,
+            "busy": True,
+            "profile": "datapath",
+            "error": "Diagnostics are already running",
+            "sections": {},
         }
 
         with mock.patch.object(
             collector,
             "diagnostics",
             return_value=payload,
-        ) as diagnostics_mock:
-            response = self.client.get(
-                "/api/diagnostics"
-                "?profile=overview"
+        ):
+            response = self.client.post(
+                "/api/diagnostics",
+                json={"profile": "datapath"},
             )
 
-        self.assertEqual(
-            response.status_code,
-            200,
-        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json(), payload)
 
-        self.assertEqual(
-            response.get_json(),
-            payload,
-        )
-
-        diagnostics_mock.assert_called_once_with(
-            "overview"
-        )
-
-    def test_counters_api_routes_to_collector(self):
-        collector = (
-            self.app_module
-            .advanced_collector
-        )
-
-        payload = {
-            "enabled": True,
-            "online": True,
-            "profile": "counters",
-            "error": None,
-            "sections": {
-                "PLOAM_UPSTREAM":
-                    "synthetic counter",
-            },
-        }
-
-        with mock.patch.object(
-            collector,
-            "diagnostics",
-            return_value=payload,
-        ) as diagnostics_mock:
-            response = self.client.get(
-                "/api/diagnostics"
-                "?profile=counters"
-            )
-
-        self.assertEqual(
-            response.status_code,
-            200,
-        )
-
-        self.assertEqual(
-            response.get_json(),
-            payload,
-        )
-
-        diagnostics_mock.assert_called_once_with(
-            "counters"
-        )
-
-    def test_api_defaults_to_overview(self):
+    def test_api_response_is_json_safe(self):
         collector = (
             self.app_module
             .advanced_collector
@@ -511,24 +977,24 @@ class DiagnosticsApiTests(unittest.TestCase):
             collector,
             "diagnostics",
             return_value={
-                "enabled": False,
-                "online": False,
+                "enabled": True,
+                "online": True,
+                "busy": False,
                 "profile": "overview",
-                "error": "disabled",
-                "sections": {},
+                "error": None,
+                "sections": {
+                    "STATUS": float("nan"),
+                },
             },
-        ) as diagnostics_mock:
-            response = self.client.get(
-                "/api/diagnostics"
+        ):
+            response = self.client.post(
+                "/api/diagnostics",
+                json={"profile": "overview"},
             )
 
-        self.assertEqual(
-            response.status_code,
-            200,
-        )
-
-        diagnostics_mock.assert_called_once_with(
-            "overview"
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(
+            response.get_json()["sections"]["STATUS"]
         )
 
 

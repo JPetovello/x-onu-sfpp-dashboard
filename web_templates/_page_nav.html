@@ -31,7 +31,10 @@
 
     <a
         href="/alerts-settings"
-        class="settings-nav-link">
+        class="settings-nav-link"
+        {% if active_page == "alerts" %}
+        aria-current="page"
+        {% endif %}>
         Alerts & Notifications
     </a>
 

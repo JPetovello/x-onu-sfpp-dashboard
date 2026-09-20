@@ -534,6 +534,7 @@ def diagnostics_page():
 def alerts_settings():
     return render_template(
         "alerts_settings.html",
+        active_page="alerts",
     )
 
 
@@ -818,28 +819,51 @@ def api_advanced_stats():
 
 
 
-@app.route("/api/diagnostics")
+@app.post("/api/diagnostics")
 def api_diagnostics():
 
-    profile = request.args.get(
-        "profile",
-        "overview",
+    payload = request.get_json(
+        silent=True
     )
+
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != {"profile"}
+        or not isinstance(
+            payload.get("profile"),
+            str,
+        )
+    ):
+        return jsonify({
+            "error": (
+                "Request body must be JSON with "
+                "exactly one string profile field"
+            ),
+        }), 400
+
+    profile = payload["profile"]
 
     if profile not in {
         "overview",
         "counters",
+        "datapath",
+        "ppv4",
+        "burst",
     }:
         return jsonify({
             "error": "Unknown diagnostic profile",
         }), 400
 
-    return jsonify(
-        json_safe_telemetry(
-            advanced_collector.diagnostics(
-                profile
-            )
+    result = json_safe_telemetry(
+        advanced_collector.diagnostics(
+            profile
         )
+    )
+
+    return jsonify(result), (
+        409
+        if result.get("busy")
+        else 200
     )
 
 

@@ -84,7 +84,11 @@ Advanced background collection runs independently from core JSON telemetry.
 
 Diagnostics are deliberately separate from the background collection loop. A diagnostic request opens its own SSH connection, executes only a fixed server-side profile, returns the resulting sections to the requester, and closes the connection.
 
+A diagnostics-only non-blocking lock permits one diagnostic execution at a time per application process. A concurrent request returns a busy result immediately. This lock is separate from the normal advanced-collector lock so Diagnostics neither pauses nor couples itself to background telemetry collection.
+
 Diagnostic output is not persisted as telemetry and is not fed into alert processing.
+
+Diagnostic sections are limited to 200,000 characters each and 1,000,000 characters in total. Truncated text ends with an explicit dashboard truncation marker. These limits apply only to transient Diagnostics responses and do not change normal telemetry collection.
 
 Never accept an arbitrary shell command, `pontop` page name, or other executable command text from a browser request. Diagnostic profiles must remain explicitly allowlisted in server-side code.
 
@@ -403,9 +407,31 @@ Pagination inputs must remain bounded. Large user-controlled offsets or limits m
 
 History endpoints downsample in SQL when appropriate instead of loading an arbitrarily large retained dataset into Python and reducing it afterward. Preserve this property when changing chart history queries.
 
-`/api/diagnostics` is request-driven rather than part of background telemetry collection. It accepts only the supported diagnostic profile names, currently `overview` and `counters`. The selected profile maps to fixed server-side SSH commands; user-controlled command text must never reach the SSH execution layer.
+`POST /api/diagnostics` is request-driven rather than part of background telemetry collection. It requires an `application/json` body containing exactly one string field:
+
+```json
+{
+  "profile": "overview"
+}
+```
+
+The supported profile names are:
+
+- `overview` — status, capability, LAN, alarms, and optical views
+- `counters` — allocation and PLOAM counter views
+- `datapath` — CQM offload, CQM queue map, Datapath Ports, and Datapath QoS
+- `ppv4` — PPv4 buffer-manager, queue-rate, queue-statistics, tree, and QStats views
+- `burst` — Debug Burst Profile
+
+Each profile maps to fixed server-side SSH commands. User-controlled command text, executable paths, and `pontop` page names must never reach the SSH execution layer. Unknown profiles and malformed request bodies are rejected before SSH execution. GET does not execute Diagnostics.
+
+Bundled diagnostic profiles use shell fail-fast behavior so an individual `pontop` failure cannot be hidden by a later successful command in the same profile.
+
+Only one diagnostic operation may run at a time per process. The collector acquires its diagnostics-only guard non-blockingly and always releases it after success or failure. A concurrent request receives `409 Conflict`; it does not wait and does not affect background collection.
 
 Diagnostic results are transient. They are returned to the current request but are not written to telemetry history and are not evaluated by the alert engine.
+
+Expert Diagnostics output remains raw. Do not add semantic interpretation, health grades, or alarm meanings for CQM, Datapath, PPv4, or burst-profile fields without hardware-tested evidence.
 
 When adding or changing an API:
 
@@ -644,7 +670,7 @@ node tests/test_diagnostics_ui.js
 
 The Diagnostics backend is covered by `tests/test_diagnostics.py`. Those tests must mock SSH execution so routine regression testing cannot contact a real ONT.
 
-The Diagnostics frontend test verifies that loading the script does not automatically fetch diagnostics and that returned diagnostic text is rendered safely.
+The Diagnostics frontend test verifies that loading or selecting profiles does not automatically fetch diagnostics, POST bodies contain only the selected allowlisted profile, busy and failure responses restore controls, and returned diagnostic text is rendered safely.
 
 The TX classification implementations must continue to agree with the shared cases in:
 
