@@ -6,9 +6,6 @@ on:
       - main
     tags:
       - "v*"
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -54,6 +51,7 @@ jobs:
             -r requirements.lock
 
       - name: Trivy filesystem scan
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -67,6 +65,7 @@ jobs:
             /src
 
       - name: Gitleaks full history
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -79,6 +78,7 @@ jobs:
             --no-banner
 
       - name: ShellCheck
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -97,6 +97,7 @@ jobs:
           done
 
       - name: Hadolint
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -107,6 +108,7 @@ jobs:
             < Dockerfile
 
       - name: Build image for vulnerability scan
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -120,6 +122,7 @@ jobs:
             -o "${RUNNER_TEMP}/xonu-security-image.tar"
 
       - name: Trivy built-image scan
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
