@@ -515,6 +515,7 @@ def index():
 def advanced_page():
     return render_template(
         "advanced.html",
+        poll_seconds=POLL_SECONDS,
         active_page="advanced",
     )
 

@@ -678,16 +678,16 @@ function updateAdvancedDisplay(
         !data ||
         !data.enabled
     ) {
-        const status =
-            byId(
-                "advancedStatus"
-            );
 
-        status.textContent =
-            "Advanced telemetry disabled";
+        setText(
+            "advancedStatus",
+            "Advanced telemetry disabled"
+        );
 
-        status.className =
-            "advanced-status";
+        setClass(
+            "advancedStatus",
+            "advanced-status"
+        );
 
         clearAdvancedDisplay();
 
@@ -697,20 +697,20 @@ function updateAdvancedDisplay(
     }
 
 
-    const status =
-        byId(
-            "advancedStatus"
-        );
 
 
     if (
         !data.online
     ) {
-        status.textContent =
-            "Advanced telemetry unavailable";
+        setText(
+            "advancedStatus",
+            "Advanced telemetry unavailable"
+        );
 
-        status.className =
-            "advanced-status bad";
+        setClass(
+            "advancedStatus",
+            "advanced-status bad"
+        );
 
         clearAdvancedDisplay();
 
@@ -720,11 +720,15 @@ function updateAdvancedDisplay(
     }
 
 
-    status.textContent =
-        `SSH telemetry online · ${data.poll_seconds}s poll`;
+    setText(
+        "advancedStatus",
+        `SSH telemetry online · ${data.poll_seconds}s poll`
+    );
 
-    status.className =
-        "advanced-status good";
+    setClass(
+        "advancedStatus",
+        "advanced-status good"
+    );
 
 
     const m =
@@ -1464,16 +1468,16 @@ async function loadAdvancedCurrent() {
             online: false
         };
 
-        const status =
-            byId(
-                "advancedStatus"
-            );
 
-        status.textContent =
-            "Advanced telemetry unavailable";
+        setText(
+            "advancedStatus",
+            "Advanced telemetry unavailable"
+        );
 
-        status.className =
-            "advanced-status bad";
+        setClass(
+            "advancedStatus",
+            "advanced-status bad"
+        );
 
         clearAdvancedDisplay();
 
@@ -2232,6 +2236,16 @@ async function refreshHistory() {
     ]);
 }
 
+async function refreshSecondaryTelemetry() {
+    if (historyButtons.length > 0) {
+        await refreshHistory();
+        return;
+    }
+
+    await loadAdvancedStats();
+}
+
+
 
 function setRange(
     range
@@ -2245,41 +2259,38 @@ function setRange(
     );
 
 
-    document
-        .querySelectorAll(
-            ".range-buttons button"
-        )
-        .forEach(
-            button => {
-                button.classList.toggle(
-                    "active",
-                    button.dataset.range ===
-                    selectedRange
-                );
-            }
-        );
+    historyButtons.forEach(
+        button => {
+            button.classList.toggle(
+                "active",
+                button.dataset.range ===
+                selectedRange
+            );
+        }
+    );
 
 
     refreshHistory();
 }
 
 
-document
-    .querySelectorAll(
+const historyButtons =
+    document.querySelectorAll(
         ".range-buttons button"
-    )
-    .forEach(
-        button => {
-            button.addEventListener(
-                "click",
-                () => {
-                    setRange(
-                        button.dataset.range
-                    );
-                }
-            );
-        }
     );
+
+historyButtons.forEach(
+    button => {
+        button.addEventListener(
+            "click",
+            () => {
+                setRange(
+                    button.dataset.range
+                );
+            }
+        );
+    }
+);
 
 
 window.addEventListener(
@@ -2291,7 +2302,12 @@ window.addEventListener(
 
 
 refreshCurrent();
-setRange(selectedRange);
+
+if (historyButtons.length > 0) {
+    setRange(selectedRange);
+} else {
+    refreshSecondaryTelemetry();
+}
 
 
 setInterval(
@@ -2301,9 +2317,10 @@ setInterval(
 
 
 setInterval(
-    refreshHistory,
+    refreshSecondaryTelemetry,
     30000
 );
+
 
 window.addEventListener(
     "xonu-theme-change",
