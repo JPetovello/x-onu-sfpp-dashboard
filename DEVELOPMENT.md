@@ -78,8 +78,15 @@ Implements optional SSH-based advanced telemetry collection.
 - Storing advanced telemetry samples
 - Feeding advanced metrics into the alert system
 - Providing current and historical advanced telemetry to the application
+- Running fixed, on-demand diagnostic profiles for troubleshooting
 
-Advanced collection runs independently from core JSON telemetry.
+Advanced background collection runs independently from core JSON telemetry.
+
+Diagnostics are deliberately separate from the background collection loop. A diagnostic request opens its own SSH connection, executes only a fixed server-side profile, returns the resulting sections to the requester, and closes the connection.
+
+Diagnostic output is not persisted as telemetry and is not fed into alert processing.
+
+Never accept an arbitrary shell command, `pontop` page name, or other executable command text from a browser request. Diagnostic profiles must remain explicitly allowlisted in server-side code.
 
 #### GEM selection
 
@@ -382,6 +389,7 @@ The application exposes APIs for areas including:
 - core telemetry history
 - current advanced telemetry
 - advanced telemetry history
+- fixed-profile on-demand diagnostics
 - alert events and alert counts
 - alert configuration
 - available TX health profiles
@@ -395,6 +403,10 @@ Pagination inputs must remain bounded. Large user-controlled offsets or limits m
 
 History endpoints downsample in SQL when appropriate instead of loading an arbitrarily large retained dataset into Python and reducing it afterward. Preserve this property when changing chart history queries.
 
+`/api/diagnostics` is request-driven rather than part of background telemetry collection. It accepts only the supported diagnostic profile names, currently `overview` and `counters`. The selected profile maps to fixed server-side SSH commands; user-controlled command text must never reach the SSH execution layer.
+
+Diagnostic results are transient. They are returned to the current request but are not written to telemetry history and are not evaluated by the alert engine.
+
 When adding or changing an API:
 
 1. Keep existing clients and saved configuration in mind.
@@ -402,7 +414,8 @@ When adding or changing an API:
 3. Normalize non-finite telemetry before JSON serialization.
 4. Avoid returning notification credentials or SSH passwords unnecessarily.
 5. Preserve the dashboard authentication boundary.
-6. Keep telemetry collection independent from browser activity.
+6. Keep background telemetry collection independent from browser activity.
+7. Treat request-driven diagnostics as an explicit exception and keep their command surface fixed and allowlisted.
 
 The collectors are server-side processes. The dashboard does not need to remain open in a browser for telemetry, alerts, or notifications to operate.
 
@@ -425,11 +438,24 @@ static/
 
 Important JavaScript files include:
 
-- `dashboard.js` — main dashboard telemetry and UI behavior
+- `dashboard.js` — shared Dashboard and Advanced telemetry/UI behavior
 - `tx_health.js` — pure browser-side TX classification
+- `diagnostics.js` — manual, profile-scoped Diagnostics requests and safe raw-output rendering
 - `alerts.js` — alert and notification settings interface behavior
 - `alert_history.js` — paginated alert-history interface
 - `theme.js` — theme selection and persistence
+
+The primary telemetry pages are:
+
+- `/` — Dashboard: at-a-glance health, optical signal, live traffic, and recent alerts
+- `/advanced` — detailed system/PON telemetry and historical charts
+- `/diagnostics` — explicitly triggered troubleshooting output
+
+The Dashboard and Advanced pages may share telemetry code, but their templates intentionally expose different levels of detail.
+
+The Diagnostics page must not execute a diagnostic request merely because the page was opened. `diagnostics.js` runs a profile only after explicit user action.
+
+Diagnostic and other server-provided raw text must be rendered through text-safe DOM operations such as `textContent`, not through HTML-parsing sinks.
 
 HTML templates provide the corresponding pages and reusable content.
 
@@ -451,6 +477,8 @@ The application performs several operations outside normal browser requests:
 - retention cleanup
 
 These operations are intended to continue whether or not a user has the dashboard open.
+
+On-demand Diagnostics are intentionally **not** background processing. They run only for an explicit diagnostic request and must not be added to the normal polling loop.
 
 When changing startup or threading behavior, verify that a change cannot accidentally start duplicate collectors or duplicate notification processing.
 
@@ -611,7 +639,12 @@ node tests/test_tx_health.js
 node tests/test_alert_settings.js
 node tests/test_dashboard_health.js
 node tests/test_alert_rendering.js
+node tests/test_diagnostics_ui.js
 ```
+
+The Diagnostics backend is covered by `tests/test_diagnostics.py`. Those tests must mock SSH execution so routine regression testing cannot contact a real ONT.
+
+The Diagnostics frontend test verifies that loading the script does not automatically fetch diagnostics and that returned diagnostic text is rendered safely.
 
 The TX classification implementations must continue to agree with the shared cases in:
 

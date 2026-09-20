@@ -4,6 +4,14 @@ A lightweight monitoring dashboard for the EXEN X-ONU-SFPP and compatible ONTs r
 
 The dashboard provides live and historical XGS-PON telemetry using the 8311 JSON metrics endpoint, with optional SSH-based advanced monitoring, configurable alerting, alert history, and multiple notification providers.
 
+The browser interface is organized around three telemetry views:
+
+- **Dashboard** — quick operational health, optical signal, live traffic, and recent alerts.
+- **Advanced** — detailed system health, PON error counters, historical charts, and module information.
+- **Diagnostics** — explicit, on-demand troubleshooting using fixed SSH diagnostic profiles. Diagnostics do not run automatically when the page is opened.
+
+Alert, notification, and retention configuration remains on the separate **Alerts & Notifications** page.
+
 ## Features
 
 Core telemetry does not require SSH and includes:
@@ -858,30 +866,74 @@ Existing installations created by earlier versions may have `/data/metrics.db` o
 
 This preserves the existing SQLite database and historical data while allowing the non-root container to continue writing new samples, alerts, and configuration.
 
-## Dashboard
+## Web Interface
 
-The dashboard displays:
+### Dashboard
+
+The main Dashboard at `/` is intended to answer:
+
+> Is my ONT healthy?
+
+It provides the at-a-glance operational view:
 
 - Overall ONT status
 - PLOAM state
-- PON health
+- Overall PON health
 - RX and TX optical levels
 - TX bias and module voltage
+- Live download and upload rate
+- Recent alerts
+
+The core Dashboard continues to operate when optional SSH telemetry is disabled or temporarily unavailable.
+
+### Advanced
+
+The Advanced page at `/advanced` is intended to answer:
+
+> What exactly is my ONT doing?
+
+It contains the more detailed monitoring views:
+
 - Optical and CPU temperatures
 - ONT uptime
-- Memory and load
-- Live download and upload rate
-- PON error and FEC counters
+- Memory usage and system load
+- FEC status
+- PON error counters
+- Active alarms and GEM key-error counters
 - Historical optical charts
 - Historical temperature charts
 - Historical traffic charts
 - Optical module information
-- Recent alert history
-- Configurable alert settings
-- Configurable telemetry and alert-history retention
-- Discord, ntfy, Gotify, Pushover, and Generic Webhook notification settings
+- Ethernet GEM and allocation information
 
-Advanced sections automatically show a disabled or unavailable state when SSH telemetry is not active.
+Advanced telemetry depends on optional SSH access to the ONT. When SSH telemetry is disabled or unavailable, the affected values show an unavailable state without causing the core Dashboard to report the ONT itself as offline.
+
+### Diagnostics
+
+The Diagnostics page at `/diagnostics` is intended for explicit troubleshooting:
+
+> What is going on at the ONT?
+
+Diagnostics are **on-demand only**. Opening the page does not run SSH commands.
+
+The current diagnostic profiles are:
+
+- **Overview** — ONT status, capability/configuration, LAN interface status and counters, active alarms, optical interface status, and optical interface information.
+- **Counters** — allocation counters and upstream/downstream PLOAM counters.
+
+The user explicitly selects a profile and chooses **Run Diagnostics** before a diagnostic request is made.
+
+Diagnostic commands are fixed by the application. The browser cannot submit an arbitrary shell or `pontop` command.
+
+Diagnostic output is returned to the requesting browser and is not added to telemetry history or fed into alert processing.
+
+Diagnostics require optional SSH telemetry to be configured.
+
+### Alerts & Notifications
+
+Alert thresholds, notification providers, telemetry retention, and alert-history retention are managed from the separate **Alerts & Notifications** page.
+
+The main Dashboard continues to show recent alerts without using space for configuration controls.
 
 ## PLOAM State
 
