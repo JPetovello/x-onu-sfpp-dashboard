@@ -481,6 +481,16 @@ function renderAlertConfig(config) {
     renderTxConfig(tx);
 
     setAlertValue(
+        "alertOpticWarm",
+        thermal.optic_warm
+    );
+
+    setAlertValue(
+        "alertOpticHot",
+        thermal.optic_hot
+    );
+
+    setAlertValue(
         "alertThermalWarm",
         thermal.warm
     );
@@ -793,16 +803,14 @@ function markBackendErrorFields(message) {
         );
     }
 
-    if (
-        lower.includes("thermal")
-    ) {
-        markAlertInvalid(
-            "alertThermalWarm"
-        );
-
-        markAlertInvalid(
-            "alertThermalHot"
-        );
+    if (lower.includes("thermal")) {
+        if (lower.includes("optic")) {
+            markAlertInvalid("alertOpticWarm");
+            markAlertInvalid("alertOpticHot");
+        } else {
+            markAlertInvalid("alertThermalWarm");
+            markAlertInvalid("alertThermalHot");
+        }
     }
 
     if (
@@ -1091,16 +1099,28 @@ async function saveAlertConfig() {
                 );
         }
 
+        config.quality.thermal.optic_warm =
+            readNumber(
+                "alertOpticWarm",
+                "Optical warning"
+            );
+
+        config.quality.thermal.optic_hot =
+            readNumber(
+                "alertOpticHot",
+                "Optical critical"
+            );
+
         config.quality.thermal.warm =
             readNumber(
                 "alertThermalWarm",
-                "Thermal warm"
+                "CPU warning"
             );
 
         config.quality.thermal.hot =
             readNumber(
                 "alertThermalHot",
-                "Thermal hot"
+                "CPU critical"
             );
 
         config.gem_key_errors.min_delta =

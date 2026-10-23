@@ -1,0 +1,158 @@
+/* Phase 2 Advanced — visual-only redesign */
+
+body.xonu-advanced .shell {
+    width: min(1376px, calc(100% - 48px));
+    padding: 28px 0 50px;
+}
+
+body.xonu-advanced h1 {
+    font-size: clamp(30px, 4vw, 43px);
+    line-height: 1.1;
+}
+
+body.xonu-advanced .topbar {
+    margin-bottom: 26px;
+}
+
+body.xonu-advanced .section-block,
+body.xonu-advanced .chart-panel {
+    padding: 24px;
+    border-radius: 17px;
+    background: var(--panel);
+}
+
+body.xonu-advanced .health-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+body.xonu-advanced .health-row {
+    min-width: 0;
+    min-height: 100px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 17px;
+    background: var(--panel-alt);
+    border-radius: 13px;
+}
+
+body.xonu-advanced .health-row span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+body.xonu-advanced .health-row strong {
+    font-size: clamp(16px, 2vw, 24px);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    text-align: left;
+}
+
+body.xonu-advanced .health-row.full {
+    grid-column: auto;
+    min-height: 100px;
+    flex-direction: column;
+    align-items: flex-start;
+    background: var(--panel-alt);
+    border-left: 1px solid var(--line);
+}
+
+body.xonu-advanced .history-header {
+    margin-top: 32px;
+    margin-bottom: 15px;
+}
+
+body.xonu-advanced .range-buttons {
+    gap: 8px;
+}
+
+body.xonu-advanced .range-buttons button {
+    min-width: 48px;
+    padding: 10px 12px;
+    border-radius: 10px;
+}
+
+body.xonu-advanced .chart-panel {
+    margin-top: 14px;
+}
+
+body.xonu-advanced .chart-head {
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--line);
+}
+
+body.xonu-advanced .chart-meta {
+    font-variant-numeric: tabular-nums;
+}
+
+body.xonu-advanced .mini-chart {
+    padding: 19px;
+    background: var(--panel-alt);
+    border-radius: 13px;
+}
+
+body.xonu-advanced .legend {
+    gap: 21px;
+    margin-top: 16px;
+}
+
+body.xonu-advanced .info-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 11px;
+}
+
+body.xonu-advanced .info-row {
+    min-width: 0;
+    min-height: 73px;
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 9px;
+    background: var(--panel-alt);
+    border-radius: 12px;
+}
+
+body.xonu-advanced .info-row strong {
+    font-size: 13px;
+    text-align: left;
+}
+
+body.xonu-advanced .technical-strip {
+    padding: 17px;
+    gap: 22px;
+    background: var(--panel-alt);
+    border-radius: 12px;
+}
+
+@media (max-width: 1050px) {
+    body.xonu-advanced .health-grid,
+    body.xonu-advanced .info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    body.xonu-advanced .shell {
+        width: calc(100% - 28px);
+    }
+
+    body.xonu-advanced .health-grid,
+    body.xonu-advanced .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    body.xonu-advanced .health-row.full {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    body.xonu-advanced .section-block,
+    body.xonu-advanced .chart-panel {
+        padding: 16px;
+    }
+}

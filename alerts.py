@@ -10,7 +10,7 @@ from notifications import NotificationManager
 from tx_health import classify_tx_power
 
 
-CONFIG_VERSION = 3
+CONFIG_VERSION = 4
 ALERT_HISTORY_MAX_OFFSET = 100_000
 
 TX_PROFILE_LEGACY = "legacy"
@@ -95,6 +95,8 @@ DEFAULT_ALERT_CONFIG = {
         "thermal": {
             "warm": 75,
             "hot": 85,
+            "optic_warm": 60,
+            "optic_hot": 70,
         },
     },
     "ploam": {
@@ -421,7 +423,9 @@ class AlertManager:
         quality_metrics = {
             "rx_power_dBm",
             "tx_power_dBm",
-            "temperature_max",
+            "optic_tempC",
+            "cpu1_tempC",
+            "cpu2_tempC",
         }
 
         counter_metrics = {
@@ -1392,6 +1396,26 @@ class AlertManager:
                 "warm < hot"
             )
 
+        require_number(
+            thermal["optic_warm"],
+            "quality.thermal.optic_warm",
+        )
+
+        require_number(
+            thermal["optic_hot"],
+            "quality.thermal.optic_hot",
+        )
+
+        if not (
+            thermal["optic_warm"]
+            <
+            thermal["optic_hot"]
+        ):
+            raise ValueError(
+                "Optical thermal thresholds must satisfy "
+                "optic_warm < optic_hot"
+            )
+
         ploam = require_dict(
             config["ploam"],
             "ploam",
@@ -1657,6 +1681,10 @@ class AlertManager:
         if not isinstance(quality, dict):
             return config
 
+        original_version = config.get(
+            "config_version"
+        )
+
         tx = quality.get(
             "tx_power"
         )
@@ -1748,6 +1776,29 @@ class AlertManager:
                     "core_reachability"
                 ]["failure_samples"],
             )
+
+        thermal = quality.get("thermal")
+
+        if (
+            original_version in (None, 2, 3)
+            and isinstance(thermal, dict)
+            and set(thermal) == {"warm", "hot"}
+        ):
+            # Preserve customised legacy alert behaviour.
+            # Only the original defaults receive the new
+            # optical-specific monitoring policy.
+            if (
+                thermal["warm"] == 75
+                and thermal["hot"] == 85
+            ):
+                thermal["optic_warm"] = 60
+                thermal["optic_hot"] = 70
+            else:
+                thermal["optic_warm"] = thermal["warm"]
+                thermal["optic_hot"] = thermal["hot"]
+
+        if original_version == 3:
+            config["config_version"] = CONFIG_VERSION
 
         return config
 
@@ -1935,6 +1986,9 @@ class AlertManager:
                 "rx_power_dBm",
                 "tx_power_dBm",
                 "temperature_max",
+                "optic_tempC",
+                "cpu1_tempC",
+                "cpu2_tempC",
             ):
                 self._reset_quality_runtime_state_locked(
                     metric_name
@@ -1956,13 +2010,33 @@ class AlertManager:
         ):
             self._reset_tx_runtime_state_locked()
 
-        if (
-            previous_quality["thermal"]
-            !=
-            current_quality["thermal"]
-        ):
+        old_thermal = previous_quality["thermal"]
+        new_thermal = current_quality["thermal"]
+
+        if old_thermal != new_thermal:
+            # Discard any obsolete combined-temperature state.
             self._reset_quality_runtime_state_locked(
                 "temperature_max"
+            )
+
+        if any(
+            old_thermal[key] != new_thermal[key]
+            for key in ("warm", "hot")
+        ):
+            for metric_name in (
+                "cpu1_tempC",
+                "cpu2_tempC",
+            ):
+                self._reset_quality_runtime_state_locked(
+                    metric_name
+                )
+
+        if any(
+            old_thermal[key] != new_thermal[key]
+            for key in ("optic_warm", "optic_hot")
+        ):
+            self._reset_quality_runtime_state_locked(
+                "optic_tempC"
             )
 
         if (
@@ -2707,74 +2781,23 @@ class AlertManager:
         )
 
 
-    def _thermal_status(
-        self,
-        metrics,
-    ):
-        thresholds = (
-            ALERT_CONFIG["quality"][
-                "thermal"
-            ]
-        )
+    @staticmethod
+    def _thermal_sensor_status(value, warm, hot):
+        try:
+            value = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return ("UNKNOWN", "unknown", None)
 
-        values = []
+        if not math.isfinite(value):
+            return ("UNKNOWN", "unknown", None)
 
-        for metric_name in (
-            "optic_tempC",
-            "cpu1_tempC",
-            "cpu2_tempC",
-        ):
-            value = metrics.get(
-                metric_name
-            )
+        if value >= hot:
+            return ("HOT", "bad", value)
 
-            try:
-                value = float(
-                    value
-                )
-            except (
-                TypeError,
-                ValueError,
-            ):
-                continue
+        if value >= warm:
+            return ("WARM", "warn", value)
 
-            if not math.isfinite(value):
-                continue
-
-            values.append(
-                value
-            )
-
-        if not values:
-            return (
-                "UNKNOWN",
-                "unknown",
-                None,
-            )
-
-        maximum = max(
-            values
-        )
-
-        if maximum >= thresholds["hot"]:
-            return (
-                "HOT",
-                "bad",
-                maximum,
-            )
-
-        if maximum >= thresholds["warm"]:
-            return (
-                "WARM",
-                "warn",
-                maximum,
-            )
-
-        return (
-            "NORMAL",
-            "good",
-            maximum,
-        )
+        return ("NORMAL", "good", value)
 
 
     def _process_core_reachability(
@@ -3417,33 +3440,65 @@ class AlertManager:
             )
 
 
-    def _process_thermal_state(
-        self,
-        ts,
-        metrics,
-    ):
-        (
-            status_text,
-            level,
-            value,
-        ) = self._thermal_status(
-            metrics
-        )
+    def _process_thermal_state(self, ts, metrics):
+        # Evaluate each sensor independently, under the same
+        # lock used when updating the active alert policy.
+        with self.lock:
+            thermal = ALERT_CONFIG["quality"]["thermal"]
 
-        self._process_quality_state(
-            ts=ts,
-            state_key=(
-                "core_quality",
-                "thermal",
-            ),
-            alert_prefix="thermal",
-            metric_name="temperature_max",
-            label="Thermal state",
-            status_text=status_text,
-            level=level,
-            value=value,
-            unit=" C",
-        )
+            sensors = (
+                (
+                    "optic_tempC",
+                    "thermal_optic",
+                    "Optical module",
+                    thermal["optic_warm"],
+                    thermal["optic_hot"],
+                ),
+                (
+                    "cpu1_tempC",
+                    "thermal_cpu1",
+                    "CPU 1",
+                    thermal["warm"],
+                    thermal["hot"],
+                ),
+                (
+                    "cpu2_tempC",
+                    "thermal_cpu2",
+                    "CPU 2",
+                    thermal["warm"],
+                    thermal["hot"],
+                ),
+            )
+
+            for (
+                metric_name,
+                alert_prefix,
+                label,
+                warm,
+                hot,
+            ) in sensors:
+                status, level, value = (
+                    self._thermal_sensor_status(
+                        metrics.get(metric_name),
+                        warm,
+                        hot,
+                    )
+                )
+
+                self._process_quality_state(
+                    ts=ts,
+                    state_key=(
+                        "core_quality",
+                        metric_name,
+                    ),
+                    alert_prefix=alert_prefix,
+                    metric_name=metric_name,
+                    label=f"{label} temperature",
+                    status_text=status,
+                    level=level,
+                    value=value,
+                    unit=" C",
+                )
 
 
     def process_core_sample(

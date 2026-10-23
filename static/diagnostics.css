@@ -1,0 +1,192 @@
+/* Phase 2 Diagnostics — visual-only redesign */
+
+body.xonu-diagnostics .shell {
+    width: min(1376px, calc(100% - 48px));
+    padding: 28px 0 50px;
+}
+
+body.xonu-diagnostics h1 {
+    font-size: clamp(30px, 4vw, 43px);
+    line-height: 1.1;
+}
+
+body.xonu-diagnostics .topbar {
+    margin-bottom: 26px;
+}
+
+body.xonu-diagnostics .section-block {
+    padding: 24px;
+    border-radius: 17px;
+    background: var(--panel);
+}
+
+body.xonu-diagnostics .diagnostics-intro {
+    margin: 10px 0 22px;
+    line-height: 1.6;
+}
+
+body.xonu-diagnostics .diagnostics-profile-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+body.xonu-diagnostics .diagnostics-profile-control {
+    min-width: 0;
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 23px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: var(--panel-alt);
+}
+
+body.xonu-diagnostics .diagnostics-profile-control:first-child {
+    border-top: 3px solid var(--accent);
+}
+
+body.xonu-diagnostics .diagnostics-profile-control:nth-child(2) {
+    border-top: 3px solid var(--cpu1);
+}
+
+body.xonu-diagnostics .diagnostics-profile-control h3 {
+    font-size: 18px;
+    margin: 0 0 10px;
+}
+
+body.xonu-diagnostics .diagnostics-profile-control p {
+    max-width: 48ch;
+    line-height: 1.6;
+}
+
+body.xonu-diagnostics .diagnostics-profile-buttons {
+    gap: 9px;
+}
+
+body.xonu-diagnostics .diagnostics-profile-button {
+    min-height: 42px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    background: var(--button-bg);
+}
+
+body.xonu-diagnostics .diagnostics-profile-button.active {
+    border-color: var(--accent);
+    background: var(--button-active-bg);
+    color: var(--button-active-text);
+}
+
+body.xonu-diagnostics .diagnostics-controls {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+}
+
+body.xonu-diagnostics .diagnostics-run-button {
+    min-height: 46px;
+    padding: 12px 22px;
+    border: 1px solid var(--button-active-border);
+    border-radius: 11px;
+    background: var(--button-active-bg);
+    color: var(--button-active-text);
+}
+
+body.xonu-diagnostics .diagnostics-run-button:hover:not(:disabled) {
+    border-color: var(--accent);
+}
+
+body.xonu-diagnostics .diagnostics-status {
+    margin: 15px 0 0;
+    padding: 12px 15px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel-alt);
+    line-height: 1.5;
+}
+
+body.xonu-diagnostics .diagnostics-status.good {
+    border-left: 3px solid var(--good);
+}
+
+body.xonu-diagnostics .diagnostics-status.warn {
+    border-left: 3px solid var(--warn);
+    color: var(--warn);
+}
+
+body.xonu-diagnostics .diagnostics-status.bad {
+    border-left: 3px solid var(--bad);
+}
+
+body.xonu-diagnostics .diagnostics-results-panel {
+    margin-top: 16px;
+}
+
+body.xonu-diagnostics .diagnostics-results-head {
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
+}
+
+body.xonu-diagnostics #diagnosticsProfileLabel {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel-alt);
+}
+
+body.xonu-diagnostics .diagnostics-empty {
+    padding: 24px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    background: var(--panel-alt);
+    text-align: center;
+}
+
+body.xonu-diagnostics .diagnostics-section {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+}
+
+body.xonu-diagnostics .diagnostics-section h3 {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+body.xonu-diagnostics .diagnostics-output {
+    line-height: 1.65;
+    font-size: 12px;
+}
+
+@media (max-width: 800px) {
+    body.xonu-diagnostics .diagnostics-profile-groups {
+        grid-template-columns: 1fr;
+    }
+
+    body.xonu-diagnostics .diagnostics-profile-control {
+        min-height: 0;
+    }
+}
+
+@media (max-width: 680px) {
+    body.xonu-diagnostics .shell {
+        width: calc(100% - 28px);
+    }
+
+    body.xonu-diagnostics .section-block {
+        padding: 16px;
+    }
+
+    body.xonu-diagnostics .diagnostics-results-head {
+        align-items: flex-start;
+    }
+
+    body.xonu-diagnostics .diagnostics-profile-buttons {
+        flex-wrap: wrap;
+    }
+}

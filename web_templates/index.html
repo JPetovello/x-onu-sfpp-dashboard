@@ -14,9 +14,10 @@
 <link
     rel="stylesheet"
     href="/static/style.css">
+<link rel="stylesheet" href="/static/dashboard.css">
 </head>
 
-<body>
+<body class="xonu-dashboard">
 
 <main class="shell">
 
@@ -158,6 +159,22 @@
                 class="metric-health health-badge unknown">
                 -
             </span>
+            <div class="xonu-signal-chart">
+                <div class="xonu-chart-heading">
+                    <span>Recent optical trend</span>
+                    <span>60 MIN</span>
+                </div>
+                <svg id="rxTrendChart"
+                     viewBox="0 0 420 72"
+                     preserveAspectRatio="none"
+                     role="img"
+                     aria-label="Optical history unavailable"></svg>
+                <div id="rxTrendCaption"
+                     class="xonu-chart-caption">
+                    Waiting for history
+                </div>
+            </div>
+
 
         </article>
 
@@ -183,6 +200,22 @@
                 class="metric-health health-badge unknown">
                 -
             </span>
+            <div class="xonu-signal-chart">
+                <div class="xonu-chart-heading">
+                    <span>Recent optical trend</span>
+                    <span>60 MIN</span>
+                </div>
+                <svg id="txTrendChart"
+                     viewBox="0 0 420 72"
+                     preserveAspectRatio="none"
+                     role="img"
+                     aria-label="Optical history unavailable"></svg>
+                <div id="txTrendCaption"
+                     class="xonu-chart-caption">
+                    Waiting for history
+                </div>
+            </div>
+
 
         </article>
 
@@ -241,105 +274,113 @@
         </h2>
     </div>
 
-    <div class="thermal-grid">
 
-        <article class="metric-card">
-
-            <span class="label">
-                Optic Temperature
-            </span>
-
-            <span
-                id="opticTemp"
-                class="value">
-                -
-            </span>
-
-            <span class="unit">
-                °C
-            </span>
-
+    <div class="thermal-grid" aria-label="Temperature instruments">
+        <article class="thermal-tile thermal-featured" data-level="unavailable">
+            <div class="thermal-title">
+                <span class="label">Optical Module</span>
+                <span class="thermal-hint">Temperature</span>
+            </div>
+            <div class="thermal-dial optic" id="opticMeter" role="img"
+                 aria-label="Optical temperature unavailable">
+                <div class="thermal-reading">
+                    <span id="opticTemp" class="thermal-number">-</span>
+                    <span class="thermal-unit">°C</span>
+                </div>
+            </div>
+            <span class="thermal-level" id="opticLevel">Unavailable</span>
+            <span class="thermal-caption">Optical temperature · guidance band</span>
         </article>
 
-        <article class="metric-card">
-
-            <span class="label">
-                CPU 1
-            </span>
-
-            <span
-                id="cpu1Temp"
-                class="value">
-                -
-            </span>
-
-            <span class="unit">
-                °C
-            </span>
-
+        <article class="thermal-tile thermal-compact" data-level="unavailable">
+            <div class="thermal-description">
+                <span class="label">CPU 1</span>
+                <span class="thermal-hint">Processor sensor</span>
+                <span class="thermal-level" id="cpu1Level">Unavailable</span>
+            </div>
+            <div class="thermal-dial" id="cpu1Meter" role="img"
+                 aria-label="CPU 1 temperature unavailable">
+                <div class="thermal-reading">
+                    <span id="cpu1Temp" class="thermal-number">-</span>
+                    <span class="thermal-unit">°C</span>
+                </div>
+            </div>
         </article>
 
-        <article class="metric-card">
-
-            <span class="label">
-                CPU 2
-            </span>
-
-            <span
-                id="cpu2Temp"
-                class="value">
-                -
-            </span>
-
-            <span class="unit">
-                °C
-            </span>
-
+        <article class="thermal-tile thermal-compact" data-level="unavailable">
+            <div class="thermal-description">
+                <span class="label">CPU 2</span>
+                <span class="thermal-hint">Processor sensor</span>
+                <span class="thermal-level" id="cpu2Level">Unavailable</span>
+            </div>
+            <div class="thermal-dial" id="cpu2Meter" role="img"
+                 aria-label="CPU 2 temperature unavailable">
+                <div class="thermal-reading">
+                    <span id="cpu2Temp" class="thermal-number">-</span>
+                    <span class="thermal-unit">°C</span>
+                </div>
+            </div>
         </article>
-
     </div>
 
-    <div class="system-strip">
+    <div class="thermal-bands" aria-label="Operational temperature guidance">
+        <span><strong>Optimal</strong>Optic &lt;50°C · CPU &lt;65°C</span>
+        <span><strong>Warm</strong>Optic 50–&lt;60°C · CPU 65–&lt;75°C</span>
+        <span><strong>Warning</strong>Optic 60–&lt;70°C · CPU 75–&lt;85°C</span>
+        <span><strong>Critical</strong>Optic 70°C+ · CPU 85°C+</span>
+    </div>
+    <p class="thermal-disclaimer">
+        Operational guidance, not manufacturer sensor limits.
+        Notifications continue using configured alert settings.
+    </p>
 
-        <div class="system-item">
-            <span class="label">
-                ONT Uptime
-            </span>
 
-            <strong id="ontUptime">
-                -
-            </strong>
-        </div>
+    <div class="system-strip xonu-system-instruments">
 
-        <div class="system-item">
-            <span class="label">
-                Memory
-            </span>
+        <article class="xonu-system-tile xonu-uptime">
+            <div class="xonu-uptime-icon" aria-hidden="true">
+                ◷
+            </div>
+            <div>
+                <span class="label">ONT Uptime</span>
+                <strong id="ontUptime">-</strong>
+                <span class="subvalue">
+                    Time since last module restart
+                </span>
+            </div>
+        </article>
 
-            <strong id="memoryUsage">
-                -
-            </strong>
+        <article class="xonu-system-tile xonu-memory">
+            <span class="label">Memory Usage</span>
 
-            <span
-                id="memoryDetail"
-                class="subvalue">
-                -
-            </span>
-        </div>
+            <div class="thermal-dial xonu-memory-dial"
+                 id="memoryMeter"
+                 role="img"
+                 aria-label="Memory usage unavailable">
+                <div class="thermal-reading">
+                    <strong id="memoryUsage">-</strong>
+                </div>
+            </div>
 
-        <div class="system-item">
-            <span class="label">
-                Load
-            </span>
+            <span id="memoryDetail" class="subvalue">-</span>
+        </article>
 
-            <strong id="loadAverage">
-                -
-            </strong>
+        <article class="xonu-system-tile xonu-load">
+            <span class="label">System Load</span>
+
+            <span id="loadAverage"
+                  class="xonu-visually-hidden">-</span>
+
+            <div class="xonu-load-trio">
+                <div><strong id="load1">-</strong><span>1 min</span></div>
+                <div><strong id="load5">-</strong><span>5 min</span></div>
+                <div><strong id="load15">-</strong><span>15 min</span></div>
+            </div>
 
             <span class="subvalue">
-                1m / 5m / 15m
+                Load averages, not CPU utilization
             </span>
-        </div>
+        </article>
 
     </div>
 
@@ -387,6 +428,24 @@
                 current rate
             </span>
 
+
+            <div class="xonu-traffic-chart">
+                <div class="xonu-traffic-heading">
+                    <span>Recent traffic</span>
+                    <span>60 MIN</span>
+                </div>
+                <svg id="downloadTrafficTrend"
+                     viewBox="0 0 420 78"
+                     preserveAspectRatio="none"
+                     role="img"
+                     aria-label="Download history unavailable">
+                </svg>
+                <div id="downloadTrafficCaption"
+                     class="xonu-chart-caption">
+                    Waiting for history
+                </div>
+            </div>
+
             <div class="traffic-detail">
                 <span>
                     Total
@@ -415,6 +474,24 @@
             <span class="traffic-unit">
                 current rate
             </span>
+
+
+            <div class="xonu-traffic-chart">
+                <div class="xonu-traffic-heading">
+                    <span>Recent traffic</span>
+                    <span>60 MIN</span>
+                </div>
+                <svg id="uploadTrafficTrend"
+                     viewBox="0 0 420 78"
+                     preserveAspectRatio="none"
+                     role="img"
+                     aria-label="Upload history unavailable">
+                </svg>
+                <div id="uploadTrafficCaption"
+                     class="xonu-chart-caption">
+                    Waiting for history
+                </div>
+            </div>
 
             <div class="traffic-detail">
                 <span>
@@ -451,6 +528,10 @@
 
 <script src="/static/tx_health.js"></script>
 <script src="/static/dashboard.js"></script>
+<script src="/static/thermal_gauges.js"></script>
+<script src="/static/optical_charts.js"></script>
+<script src="/static/traffic_charts.js"></script>
+<script src="/static/system_metrics.js"></script>
 <script src="/static/alerts.js"></script>
 
 </body>

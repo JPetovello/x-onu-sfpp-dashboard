@@ -16,9 +16,10 @@
 <link
     rel="stylesheet"
     href="/static/style.css">
+<link rel="stylesheet" href="/static/alert_history.css">
 </head>
 
-<body>
+<body class="xonu-alert-history">
 
 <main class="shell">
 
@@ -30,12 +31,15 @@
         </p>
 
         <h1>
-            Alert History
+            X-ONU-SFPP
         </h1>
 
         <p class="subtitle">
-            X-ONU-SFPP Dashboard
+            Alert History
         </p>
+
+        {% set active_page = "history" %}
+        {% include "_page_nav.html" %}
     </div>
 
     <div class="topbar-actions">
@@ -54,13 +58,7 @@
             </select>
         </label>
 
-        <div class="settings-page-nav">
-            <a
-                href="/"
-                class="settings-nav-link">
-                ← Back to Dashboard
-            </a>
-        </div>
+
 
     </div>
 
@@ -134,10 +132,6 @@
 
     <span>
         X-ONU-SFPP Dashboard · © 2026 Jeff Petovello · Licensed under AGPLv3
-    </span>
-
-    <span>
-        Alert History
     </span>
 
 </footer>

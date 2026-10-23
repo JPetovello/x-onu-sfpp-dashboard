@@ -170,18 +170,22 @@ Existing saved configurations are preserved. A source-code default change does n
 
 #### Thermal Thresholds
 
-Thermal alerts monitor ONT temperature readings.
+Optical module, CPU 1, and CPU 2 temperatures are monitored independently.
 
-Defaults:
+Default alert thresholds:
 
-    Warm: 75 °C
-    Hot:  85 °C
+    Optical warm: 60 °C
+    Optical hot:  70 °C
+    CPU warm:     75 °C
+    CPU hot:      85 °C
 
-**Warm** is a warning-level condition and is subject to **Warning debounce**.
+Warm conditions use the configured warning debounce. Hot conditions can generate immediate critical alerts. Each sensor maintains independent warning, critical, and recovery state.
 
-**Hot** is a critical-quality condition and can generate an alert immediately.
+The dashboard gauges use separate visual guidance bands for optical and CPU temperatures. These are monitoring indicators, not manufacturer-certified operating limits, and do not necessarily match the configurable alert boundaries.
 
-When an active thermal warning or critical condition returns to the normal range, a recovery event is generated.
+Existing configuration version 3 installations using the original 75 °C / 85 °C defaults migrate to 60 °C / 70 °C optical alert thresholds while retaining 75 °C / 85 °C CPU thresholds. Existing custom thermal thresholds are preserved.
+
+Configuration version 4 is used when the upgraded configuration is saved. Loading an existing configuration does not by itself require rewriting the stored database row.
 
 #### GEM Key Errors
 
@@ -858,7 +862,7 @@ For Unraid, the recommended mapping is:
 
     /mnt/user/appdata/x-onu-dashboard -> /data
 
-V3 continues to use the existing core `samples` and `advanced_samples` telemetry tables and automatically adds the database structures required for alert history and configuration.
+The dashboard continues to use the existing core `samples` and `advanced_samples` telemetry tables and automatically adds the database structures required for alert history and configuration.
 
 Existing telemetry history is preserved during upgrade.
 
@@ -866,11 +870,37 @@ Existing telemetry history is preserved during upgrade.
 
 Existing installations can continue using the same persistent `/data` directory.
 
-On startup, V3 creates the additional database structures required for alert events, alert configuration, notification configuration, and retention configuration if they do not already exist.
+On startup, the dashboard creates the additional database structures required for alert events, alert configuration, notification configuration, and retention configuration if they do not already exist.
 
 Existing core and advanced telemetry history is preserved. Existing installations also preserve their effective telemetry retention period when the retention configuration is created for the first time.
 
 After upgrading, review **Alert Settings** before enabling external notifications so the configured thresholds and severities are appropriate for your ONT and environment.
+
+### Phase 2 Upgrade and Rollback
+
+Before applying a Phase 2 image update, create and verify a consistent SQLite backup of the existing persistent `/data/metrics.db`. Preserve the original container configuration and original image reference.
+
+Phase 2 introduces alert configuration schema version 4 and independent thermal alerts. Existing telemetry and alert-history records are intended to remain intact. Restoring an older image after saving version 4 settings may require restoring a compatible pre-upgrade database backup. Restoring a database backup can discard samples and events collected after that backup was created.
+
+The existing release process is:
+
+1. Review and commit the approved source changes.
+2. Merge the approved release into `main`.
+3. Push an approved `v*` release tag.
+4. Allow GitHub Actions to publish the versioned image and `latest` to GHCR.
+5. Confirm successful publishing before selecting **Update All** in Unraid.
+
+A push to `main` alone does not guarantee that the `latest` tag changes. Production is updated only when the operator chooses to apply the new image in Unraid.
+
+Dashboard authentication requires separately configuring `DASHBOARD_AUTH_USERNAME` and `DASHBOARD_AUTH_PASSWORD` in the Unraid container settings. A Docker image update alone does not add these variables.
+
+Optional Docker runtime restrictions such as a read-only root filesystem, dropped Linux capabilities, and `no-new-privileges` are also container settings, not properties automatically applied by an image update. A read-only root filesystem must still allow writable persistent `/data` and suitable temporary storage. Test these settings before applying them to an existing installation.
+
+### LAN Authentication
+
+HTTP Basic authentication is supported on the local network, but passwords are transmitted without transport encryption when the dashboard is accessed using ordinary HTTP. Use a strong, unique password, restrict network access, and use HTTPS wherever credential confidentiality is required.
+
+Do not expose the dashboard directly to the public Internet.
 
 ## Upgrading to the Non-Root Runtime
 
@@ -885,6 +915,17 @@ Existing installations created by earlier versions may have `/data/metrics.db` o
 This preserves the existing SQLite database and historical data while allowing the non-root container to continue writing new samples, alerts, and configuration.
 
 ## Web Interface
+
+Phase 2 provides five coordinated pages:
+
+- **Dashboard** (`/`) — health overview, thermal gauges, optical and traffic monitoring, and recent alerts.
+- **Advanced** (`/advanced`) — detailed system and PON telemetry and historical charts.
+- **Diagnostics** (`/diagnostics`) — explicitly requested, allowlisted troubleshooting profiles.
+- **Alerts & Notifications** (`/alerts-settings`) — thresholds, notification providers, and retention settings.
+- **Alert History** (`/alert-history`) — recorded events and pagination.
+
+The interface uses self-hosted HTML, CSS, and JavaScript. Historical charts retain their time-range controls, including the 60-minute view.
+
 
 ### Dashboard
 

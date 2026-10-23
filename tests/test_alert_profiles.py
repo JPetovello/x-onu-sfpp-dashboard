@@ -177,7 +177,7 @@ class AlertProfileTests(unittest.TestCase):
         manager = AlertManager(self.db_path)
         loaded = manager.get_config()
 
-        self.assertEqual(loaded["config_version"], 3)
+        self.assertEqual(loaded["config_version"], 4)
         self.assertEqual(
             loaded["quality"]["tx_power"]["profile"],
             "custom",

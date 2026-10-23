@@ -1,0 +1,162 @@
+/* Phase 2 Alerts & Notifications — visual-only */
+
+body.xonu-alerts .shell {
+    width: min(1376px, calc(100% - 48px));
+    padding: 28px 0 50px;
+}
+
+body.xonu-alerts h1 {
+    font-size: clamp(30px, 4vw, 43px);
+    line-height: 1.1;
+}
+
+body.xonu-alerts .topbar {
+    margin-bottom: 26px;
+}
+
+body.xonu-alerts .section-block {
+    padding: 24px;
+    border-radius: 17px;
+    background: var(--panel);
+}
+
+body.xonu-alerts .alerts-panel {
+    margin-bottom: 16px;
+}
+
+body.xonu-alerts .settings-summary {
+    padding: 0;
+}
+
+body.xonu-alerts .settings-summary-right {
+    gap: 14px;
+}
+
+body.xonu-alerts .alert-settings-grid,
+body.xonu-alerts .alert-state-settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+body.xonu-alerts .alert-setting-card {
+    min-width: 0;
+    padding: 22px;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel-alt);
+}
+
+body.xonu-alerts .alert-setting-label {
+    letter-spacing: 0.07em;
+}
+
+body.xonu-alerts .alert-threshold-list {
+    gap: 12px;
+}
+
+body.xonu-alerts .alert-threshold-row {
+    min-height: 33px;
+    gap: 14px;
+}
+
+body.xonu-alerts .alert-setting-help {
+    line-height: 1.55;
+}
+
+body.xonu-alerts .alert-counter-section {
+    margin-top: 26px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+}
+
+body.xonu-alerts .alert-counter-table {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+body.xonu-alerts .alert-counter-row {
+    padding: 15px 17px;
+    gap: 16px;
+    border-color: var(--line);
+}
+
+body.xonu-alerts .alert-counter-header {
+    background: var(--panel-alt);
+}
+
+body.xonu-alerts .notification-settings-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+body.xonu-alerts .notification-provider-row,
+body.xonu-alerts .notification-provider-row:first-child,
+body.xonu-alerts .notification-provider-row:last-child {
+    min-width: 0;
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel-alt);
+}
+
+body.xonu-alerts .notification-provider-row
+.notification-field,
+body.xonu-alerts .notification-provider-row
+.alert-setting-help {
+    max-width: none;
+}
+
+body.xonu-alerts .notification-provider-heading {
+    padding-bottom: 5px;
+}
+
+body.xonu-alerts .notification-field {
+    margin-top: 12px;
+}
+
+body.xonu-alerts .alert-settings-actions {
+    margin-top: 20px;
+}
+
+body.xonu-alerts .alert-settings-save {
+    min-height: 43px;
+    padding: 10px 18px;
+    border-radius: 10px;
+}
+
+body.xonu-alerts .alert-settings-save:focus-visible,
+body.xonu-alerts .alert-setting-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+body.xonu-alerts #retentionSettingsPanel .alert-settings-grid {
+    margin-top: 17px;
+}
+
+@media (max-width: 850px) {
+    body.xonu-alerts .alert-settings-grid,
+    body.xonu-alerts .alert-state-settings,
+    body.xonu-alerts .notification-settings-stack {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    body.xonu-alerts .shell {
+        width: calc(100% - 28px);
+    }
+
+    body.xonu-alerts .section-block {
+        padding: 16px;
+    }
+
+    body.xonu-alerts .alert-setting-card,
+    body.xonu-alerts .notification-provider-row {
+        padding: 16px;
+    }
+}

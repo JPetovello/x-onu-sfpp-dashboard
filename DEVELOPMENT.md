@@ -158,7 +158,7 @@ The default operational state is `51`, but both server and browser behavior must
 
 #### TX health profiles
 
-TX optical health uses configuration schema version `3`. The persisted Legacy `quality.tx_power` object has this shape:
+TX optical health is stored in alert configuration schema version `4`; the TX profile structure itself is unchanged. The persisted Legacy `quality.tx_power` object has this shape:
 
 ```json
 {
@@ -216,7 +216,20 @@ RX, thermal, reachability, active-alarm, GEM, and counter state must not be rese
 
 TX classification and state-transition processing are held under the same re-entrant manager lock used when activating and re-baselining a changed TX policy. Preserve this atomic boundary; otherwise a collector sample could be classified under one policy and processed after another policy becomes active.
 
-Unversioned saved configurations are normalized in memory. Exact original defaults become `legacy`; user-edited values become `custom`. Version 2 Legacy and Custom configurations gain disabled operating-envelope fields without changing their thresholds. A version 2 `xgsponst2001-a01` configuration becomes Custom in memory so its former `2.00/3.00 dBm` behavior is preserved rather than silently adopting the new specification policy. The stored row is not rewritten merely because the application loaded it. An explicit settings save persists schema version `3`. Do not infer migration consent from values that happen to match a default.
+Unversioned saved configurations are normalized in memory. Exact original defaults become `legacy`; user-edited values become `custom`. Version 2 Legacy and Custom configurations gain disabled operating-envelope fields without changing their thresholds. A version 2 `xgsponst2001-a01` configuration becomes Custom in memory so its former `2.00/3.00 dBm` behavior is preserved rather than silently adopting the new specification policy. The stored row is not rewritten merely because the application loaded it. An explicit settings save persists schema version `4`. Do not infer migration consent from values that happen to match a default.
+
+#### Independent thermal monitoring — Phase 2
+
+Alert configuration schema version 4 introduces `quality.thermal.optic_warm` and `quality.thermal.optic_hot` alongside existing CPU `warm` and `hot` thresholds.
+
+- Original version 3 defaults (75 °C warm, 85 °C hot) migrate to optical 60 °C / 70 °C and CPU 75 °C / 85 °C.
+- Customized legacy thermal thresholds are preserved.
+- Optical module, CPU 1, and CPU 2 alerts have independent runtime state and recovery tracking.
+- Invalid and non-finite temperature readings are not treated as valid temperature observations.
+- Existing telemetry and alert history are not rewritten during configuration normalization.
+- The settings interface must round-trip all four threshold values.
+
+Relevant regression coverage includes `tests/test_thermal_config_v4.py`, `tests/test_thermal_alerts.py`, `tests/test_thermal_gauges.js`, and `tests/test_thermal_settings_ui.js`.
 
 ### `notifications.py`
 
@@ -471,12 +484,20 @@ Important JavaScript files include:
 - `alerts.js` — alert and notification settings interface behavior
 - `alert_history.js` — paginated alert-history interface
 - `theme.js` — theme selection and persistence
+- `thermal_gauges.js` — independent optical module and CPU gauge visualization
+- `optical_charts.js` — Phase 2 optical chart presentation
+- `traffic_charts.js` — Phase 2 traffic chart presentation
+- `system_metrics.js` — system metrics presentation
+
+Phase 2 page stylesheets include `dashboard.css`, `advanced.css`, `diagnostics.css`, `alerts_settings.css`, and `alert_history.css`.
 
 The primary telemetry pages are:
 
 - `/` — Dashboard: at-a-glance health, optical signal, live traffic, and recent alerts
 - `/advanced` — detailed system/PON telemetry and historical charts
 - `/diagnostics` — explicitly triggered troubleshooting output
+- `/alerts-settings` — alert, notification, and retention configuration
+- `/alert-history` — paginated alert-event history
 
 The Dashboard and Advanced pages may share telemetry code, but their templates intentionally expose different levels of detail.
 
@@ -668,6 +689,8 @@ node tests/test_dashboard_health.js
 node tests/test_alert_rendering.js
 node tests/test_diagnostics_ui.js
 node tests/test_email_notifications.js
+node tests/test_thermal_gauges.js
+node tests/test_thermal_settings_ui.js
 ```
 
 The Diagnostics backend is covered by `tests/test_diagnostics.py`. Those tests must mock SSH execution so routine regression testing cannot contact a real ONT.

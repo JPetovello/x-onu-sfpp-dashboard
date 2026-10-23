@@ -59,7 +59,9 @@ class AlertConfigRebaselineTests(unittest.TestCase):
             for metric in (
                 "rx_power_dBm",
                 "tx_power_dBm",
-                "temperature_max",
+                "optic_tempC",
+                "cpu1_tempC",
+                "cpu2_tempC",
             )
         ]
 
