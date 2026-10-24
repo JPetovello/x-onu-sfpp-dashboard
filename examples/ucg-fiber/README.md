@@ -70,17 +70,59 @@ This example assumes:
 
 ## Configure before installation
 
-Open **both scripts** and verify these values match each other and your network:
+Both scripts ship disabled, with blank network settings.
 
-```sh
-ONT_INTERFACE="eth6"
-MANAGEMENT_CIDR="192.168.11.2/24"
-```
+Before enabling them:
 
-For an ONT at `192.168.11.1/24`, `192.168.11.2/24` is one possible gateway-side
-address if it is otherwise unused.
+- Verify the physical ONT/SFP+ interface on your gateway.
+- Verify the ONT management subnet and an unused gateway address.
+- Check for conflicting routes, addresses, files and services.
+- Confirm a compatible persistent boot-hook mechanism is installed.
+- Have a local or console recovery method available.
+- Inspect the gateway using read-only commands such as
+  `ip -br link`, `ip -4 -br addr`, and `ip -4 route show default`.
 
-Do not assume your UCG Fiber uses `eth6`. Verify it on your own device.
+Edit BOTH scripts with your verified values for
+`ONT_INTERFACE` and `MANAGEMENT_CIDR`.
+
+Only after completing these checks, change
+`SETUP_CONFIRMED="NO"` to `SETUP_CONFIRMED="YES"`.
+
+Do not assume the reference interface `eth6` or gateway address
+`192.168.11.2/24` matches your installation.
+
+If you cannot verify these settings, STOP.
+Configuration validation does not guarantee network safety.
+
+## Important: Existing installations
+
+> [!WARNING]
+> Do not copy these updated scripts over an existing installation
+> without reviewing the migration first.
+
+Earlier versions created a systemd service without the ownership
+marker required by the hardened boot script.
+
+The new boot script will refuse to replace that legacy service.
+This prevents accidentally overwriting an unrelated service,
+but also means an existing installation cannot be upgraded by
+simply replacing its files.
+
+Before planning a migration:
+
+1. Record the current interface and management address.
+2. Identify and inspect the installed watcher and boot script.
+3. Identify the service unit and confirm its ownership.
+4. Preserve backups of the existing working configuration.
+5. Prepare and validate both replacement scripts offline.
+6. Arrange a maintenance window and a recovery method.
+
+Do not delete the existing service merely to bypass the
+protection. A deliberate migration and rollback procedure
+is required.
+
+If the existing installation is working, leaving it unchanged
+is safer than attempting an unplanned upgrade.
 
 ## Installation
 
@@ -213,23 +255,108 @@ A script damaged by CRLF conversion may fail with an error similar to a
 
 ### Gateway installation
 
+> [!CAUTION]
+> **NEW INSTALLATIONS ONLY.**
+>
+> Do not use the following installation commands to
+> upgrade an existing installation.
+>
+> Before copying files, verify these destinations
+> do not already exist:
+>
+> - /data/ont-management-watch.sh
+> - /data/on_boot.d/20-ont-management.sh
+> - /etc/systemd/system/ont-management-watch.service
+>
+> Also check whether ont-management-watch.service
+> is already registered with systemd.
+>
+> If any file or service exists, STOP.
+> Do not overwrite or delete it.
+>
+> Existing installations require a controlled migration
+> with verified backups and a rollback procedure.
+
+
 From this point onward, the commands are the same regardless of whether the
 administrator's computer is running Windows, Linux, or macOS.
 
-Copy the watcher to persistent storage:
+For a new installation, install both scripts using this
+single guarded command block on the UCG Fiber.
+It refuses to overwrite an existing installation.
 
 ```sh
+(
+set -eu
+
+for destination in \
+    /data/ont-management-watch.sh \
+    /data/on_boot.d/20-ont-management.sh \
+    /etc/systemd/system/ont-management-watch.service
+do
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        echo "STOP: Existing file: $destination" >&2
+        exit 1
+    fi
+done
+
+if systemctl cat ont-management-watch.service >/dev/null 2>&1; then
+    echo "STOP: Service already registered" >&2
+    exit 1
+fi
+
+if [ ! -d /data/on_boot.d ]; then
+    echo "STOP: Boot-hook directory missing" >&2
+    exit 1
+fi
+
+# Reject unconfigured or inconsistent examples.
+for script in ont-management-watch.sh 20-ont-management.sh
+do
+    if [ ! -f "$script" ] || [ -L "$script" ]; then
+        echo "STOP: Invalid script file: $script" >&2
+        exit 1
+    fi
+
+    if ! grep -Fxq 'SETUP_CONFIRMED="YES"' "$script"; then
+        echo "STOP: Setup not confirmed in $script" >&2
+        exit 1
+    fi
+
+    if ! grep -Eq '^ONT_INTERFACE="[A-Za-z0-9_.:-]+"$' "$script"; then
+        echo "STOP: Interface not configured in $script" >&2
+        exit 1
+    fi
+
+    if ! grep -Eq '^MANAGEMENT_CIDR="[0-9.]+/[0-9]+"$' "$script"; then
+        echo "STOP: Management address not configured in $script" >&2
+        exit 1
+    fi
+done
+
+for key in ONT_INTERFACE MANAGEMENT_CIDR
+do
+    boot_value=$(grep "^${key}=" 20-ont-management.sh)
+    watch_value=$(grep "^${key}=" ont-management-watch.sh)
+
+    if [ "$boot_value" != "$watch_value" ]; then
+        echo "STOP: Conflicting $key settings" >&2
+        exit 1
+    fi
+done
+
+sh -n ont-management-watch.sh
+sh -n 20-ont-management.sh
+
 cp ont-management-watch.sh /data/ont-management-watch.sh
 chmod 0755 /data/ont-management-watch.sh
-```
-
-Copy the boot script into the persistent boot-hook directory used by `udm-boot`:
-
-```sh
 cp 20-ont-management.sh /data/on_boot.d/20-ont-management.sh
 chmod 0755 /data/on_boot.d/20-ont-management.sh
+)
 ```
 
+If any safety check fails, stop and investigate.
+Do not bypass the checks to force an installation.
 Run the boot script once manually only after confirming the configuration:
 
 ```sh
@@ -241,7 +368,7 @@ Run the boot script once manually only after confirming the configuration:
 Check the management address:
 
 ```sh
-ip -4 addr show dev eth6
+ip -4 addr show dev YOUR_VERIFIED_INTERFACE
 ```
 
 Check the watcher service:
@@ -259,27 +386,77 @@ journalctl -t ont-management --no-pager -n 50
 Test ONT reachability using the address appropriate for your installation:
 
 ```sh
-ping -c 3 192.168.11.1
+ping -c 3 YOUR_ONT_MANAGEMENT_IP
 ```
 
 ## Recovery / removal
 
-If you need to remove this example configuration, stop and disable the watcher,
-remove the generated service unit, and remove the persistent scripts:
+> [!CAUTION]
+> These commands change gateway configuration. Confirm that the
+> service and files belong to this example before removing them.
+> Never remove an address unless you have independently confirmed
+> that it is the address installed by these helpers.
+
+If SSH access is lost, use your established local or console
+recovery method. Do not reboot blindly or remove unrelated
+network configuration.
+
+All uppercase network values below are placeholders and MUST
+be replaced with your own verified values.
+
+
+The following removal procedure applies only to the hardened
+helper installed from these examples. Legacy installations
+require a separately reviewed removal procedure.
+
+Verify ownership before stopping or removing anything:
 
 ```sh
-systemctl disable --now ont-management-watch.service 2>/dev/null || true
-rm -f /etc/systemd/system/ont-management-watch.service
+(
+set -eu
+
+BOOT=/data/on_boot.d/20-ont-management.sh
+WATCH=/data/ont-management-watch.sh
+UNIT=/etc/systemd/system/ont-management-watch.service
+
+for file in "$BOOT" "$WATCH" "$UNIT"; do
+    test -f "$file" && test ! -L "$file" || {
+        echo "STOP: Missing or unsafe file: $file" >&2
+        exit 1
+    }
+done
+
+grep -Fxq \
+    "# Managed by X-ONU-SFPP UCG Fiber example" "$UNIT"
+
+grep -Fxq \
+    "ExecStart=/data/ont-management-watch.sh" "$UNIT"
+
+grep -Fq 'WATCH_SCRIPT="/data/ont-management-watch.sh"' "$BOOT"
+
+FRAGMENT=$(systemctl show ont-management-watch.service \
+    -p FragmentPath --value)
+test "$FRAGMENT" = "$UNIT"
+
+echo "PASS: Hardened helper ownership verified"
+
+systemctl disable --now ont-management-watch.service
+rm -f "$UNIT"
 systemctl daemon-reload
-rm -f /data/ont-management-watch.sh
-rm -f /data/on_boot.d/20-ont-management.sh
+rm -f "$BOOT" "$WATCH"
+
+echo "PASS: Hardened helper removed"
+)
 ```
 
+These commands do not remove the gateway management IP.
+Confirm ONT management connectivity and network requirements
+before considering a separate address removal.
 If you also want to remove the management address immediately, substitute your
 actual configured values:
 
 ```sh
-ip addr del 192.168.11.2/24 dev eth6
+ip addr del YOUR_VERIFIED_GATEWAY_IP_PREFIX dev YOUR_VERIFIED_INTERFACE
 ```
 
 Removing the management address may immediately remove access to the ONT

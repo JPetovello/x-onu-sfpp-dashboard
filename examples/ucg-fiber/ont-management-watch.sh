@@ -21,19 +21,65 @@ set -u
 # -----------------------------------------------------------------------------
 
 # Physical interface containing the ONT/SFP+ module.
-ONT_INTERFACE="eth6"
+SETUP_CONFIRMED="NO"
+ONT_INTERFACE=""
 
 # Management address to keep on the gateway side of the ONT management subnet.
 # Example setup:
 #   ONT:     192.168.11.1/24
 #   Gateway: 192.168.11.2/24
-MANAGEMENT_CIDR="192.168.11.2/24"
+MANAGEMENT_CIDR=""
 
 LOG_TAG="ont-management"
 
 log() {
     logger -t "$LOG_TAG" -- "$*"
 }
+
+die() {
+    printf 'ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+validate_configuration() {
+    if [ "$SETUP_CONFIRMED" != "YES" ]; then
+        die 'Not configured. Review this script and set SETUP_CONFIRMED="YES"'
+    fi
+
+    case "$ONT_INTERFACE" in
+        ""|*[!a-zA-Z0-9_.:-]*)
+            die "Invalid ONT_INTERFACE"
+            ;;
+        lo|ppp*|docker*|tailscale*)
+            die "ONT_INTERFACE must be the physical ONT/SFP+ interface"
+            ;;
+    esac
+
+    printf '%s\n' "$MANAGEMENT_CIDR" | awk -F/ '
+        NF != 2 { exit 1 }
+        $2 !~ /^[0-9]+$/ { exit 1 }
+        $2 + 0 < 1 || $2 + 0 > 32 { exit 1 }
+        {
+            n = split($1, octets, ".")
+            if (n != 4) exit 1
+
+            for (i = 1; i <= 4; i++) {
+                if (octets[i] !~ /^[0-9]+$/) exit 1
+                if (length(octets[i]) > 3) exit 1
+                if (length(octets[i]) > 1 &&
+                    substr(octets[i], 1, 1) == "0") exit 1
+                if (octets[i] + 0 > 255) exit 1
+            }
+
+            if (octets[1] < 1 || octets[1] > 223) exit 1
+        }
+    ' || die "Invalid MANAGEMENT_CIDR"
+
+    [ "$(id -u)" -eq 0 ] ||
+        die "This helper must run as root"
+}
+
+validate_configuration
 
 ensure_management_address() {
     if ! ip link show dev "$ONT_INTERFACE" >/dev/null 2>&1; then

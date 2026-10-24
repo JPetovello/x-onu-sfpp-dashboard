@@ -12,6 +12,46 @@
 > Review and adapt them for your own environment. **You are solely responsible
 > for any changes made to your gateway.**
 
+## Safety requirements for installation
+
+The example scripts ship with blank network configuration
+and SETUP_CONFIRMED set to NO.
+
+Both scripts must be configured and explicitly enabled
+before use.
+
+Before installation:
+
+- Verify the actual physical ONT/SFP+ interface.
+- Verify the management subnet and an unused gateway IP.
+- Confirm a compatible persistent boot mechanism is working.
+- Inspect existing helper files and systemd services.
+- Prepare verified backups and a recovery procedure.
+
+The installation instructions are intended for NEW
+installations only.
+
+Existing installations require a controlled migration.
+The hardened boot script will refuse to overwrite
+an existing service that lacks its ownership marker.
+
+The hardened implementation adds configuration validation,
+service ownership protection, atomic service-file replacement,
+and clearer failure reporting.
+
+The updated helper has been installed and verified on a
+UCG Fiber running PPPoE. Initial live testing confirmed
+watcher operation, ONT connectivity, and Internet connectivity.
+
+Automatic recovery following a naturally occurring management
+address removal has not yet been verified with this version.
+
+These protections reduce risk but cannot guarantee that
+an incorrectly configured gateway will remain operational.
+
+See examples/ucg-fiber/README.md for installation,
+verification, recovery, and removal instructions.
+
 ## The dashboard does not require a UCG Fiber script
 
 X-ONU-SFPP Dashboard has one networking requirement: the Docker/container host
