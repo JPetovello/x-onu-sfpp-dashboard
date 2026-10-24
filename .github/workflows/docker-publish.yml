@@ -143,16 +143,9 @@ jobs:
         run: |
           set -euo pipefail
           node --version
-          for test in \
-            tests/test_tx_health.js \
-            tests/test_alert_settings.js \
-            tests/test_dashboard_health.js \
-            tests/test_alert_rendering.js \
-            tests/test_diagnostics_ui.js \
-            tests/test_email_notifications.js \
-            tests/test_thermal_gauges.js \
-            tests/test_thermal_settings_ui.js
-          do
+
+          for test in tests/test_*.js; do
+            echo "Testing $test"
             node "$test"
           done
 
@@ -203,6 +196,7 @@ jobs:
           tags: |
             type=ref,event=tag
             type=sha,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !contains(github.ref_name, '-') }}
 
       - name: Build and publish
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
