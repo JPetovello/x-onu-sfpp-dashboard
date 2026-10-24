@@ -72,6 +72,70 @@ Default:
 
 Directory used for persistent dashboard data.
 
+## Dashboard authentication
+
+### DASHBOARD_AUTH_USERNAME and DASHBOARD_AUTH_PASSWORD
+
+Default: both unset (dashboard authentication disabled).
+
+Configure both to enable authentication. Partial configuration is rejected.
+Docker or Unraid administrators may be able to inspect environment variables,
+so use a strong, private password.
+
+### DASHBOARD_AUTH_MODE
+
+Default: `basic`.
+
+Accepted values: `basic`, `browser`.
+
+`basic` preserves the existing HTTP Basic authentication behaviour.
+`browser` enables browser sessions and requires both credentials and an HTTPS
+`DASHBOARD_PUBLIC_ORIGIN`.
+
+### DASHBOARD_PUBLIC_ORIGIN
+
+Default: unset.
+
+Required for browser mode. Example:
+
+```text
+DASHBOARD_PUBLIC_ORIGIN=https://dashboard.example.com
+```
+
+Must match the exact public HTTPS origin, including any nonstandard port.
+Paths, query strings, fragments and embedded credentials are invalid. A
+trusted HTTPS reverse proxy must serve this browser-facing endpoint.
+
+### DASHBOARD_TRUSTED_PROXY_IPS
+
+Default: unset.
+
+Optional comma-separated list of **exact** direct reverse-proxy IP addresses.
+CIDR ranges are not supported. A forwarded client IP is considered only when
+the direct peer matches an explicitly trusted proxy address and its
+`X-Forwarded-For` header contains exactly one valid IP address. Ambiguous or
+invalid values fall back to the direct peer's IP.
+
+When unset, the reverse proxy is the rate-limiting client. Avoid hardcoding
+transient Docker-assigned IPs. Trust only proxies that sanitize client-supplied
+forwarding headers.
+
+### Browser sessions
+
+With Remember This Browser enabled, durations are 1, 3, 7, 14 or 30 days;
+the default selection is 7 days. Without it, the cookie has no persistent
+Max-Age and the server lifetime is 12 hours.
+
+Bearer-token hashes, never raw bearer tokens, are stored in `/data/metrics.db`.
+Sessions can be revoked using Trusted Browsers; the server retains at most
+32 session records.
+
+Browser-mode cookies use `__Host-xonu_session`, Secure, HttpOnly,
+SameSite=Lax, and Path=/. This mode is designed for HTTPS only.
+
+Five failed logins within five minutes trigger a temporary login lockout for
+the apparent client address. Existing valid sessions continue to work.
+
 ## Advanced SSH telemetry
 
 ### SSH_ENABLED

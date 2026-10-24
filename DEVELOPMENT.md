@@ -64,6 +64,23 @@ Threads may still be used within that single process for HTTP handling and backg
 
 Core telemetry exposed to browser-facing JSON must be JSON-safe. Non-numeric or non-finite values such as `NaN` and `Infinity` must not be allowed to poison API responses. Preserve the current normalization behaviour when changing parsing or API serialization.
 
+### `browser_auth.py` and `browser_sessions.py`
+
+Browser authentication is optional; Basic authentication is the default.
+`browser_auth.py` implements the login endpoints, host/origin verification,
+CSRF enforcement, per-apparent-client login throttling, session lifecycle,
+and Trusted Browsers functionality. Forwarding headers are considered only
+from explicitly configured trusted direct proxy IPs.
+
+`browser_sessions.py` stores hashed bearer tokens and server-side expiry
+metadata in SQLite. Remembered sessions last 1/3/7/14/30 days as chosen;
+ordinary browser sessions expire on the server after 12 hours. There are
+at most 32 stored sessions.
+
+Authentication coverage includes `tests/test_browser_auth.py`,
+`tests/test_browser_sessions.py`, `tests/test_browser_client.js`,
+`tests/test_login_duration.js`, and `tests/test_trusted_browsers.js`.
+
 ### `advanced.py`
 
 Implements optional SSH-based advanced telemetry collection.
@@ -680,17 +697,12 @@ Run the complete Python regression suite with:
 python3 -m unittest discover -s tests -v
 ```
 
-Run the JavaScript regression suites with:
+Run all JavaScript regression suites with:
 
 ```bash
-node tests/test_tx_health.js
-node tests/test_alert_settings.js
-node tests/test_dashboard_health.js
-node tests/test_alert_rendering.js
-node tests/test_diagnostics_ui.js
-node tests/test_email_notifications.js
-node tests/test_thermal_gauges.js
-node tests/test_thermal_settings_ui.js
+for test in tests/test_*.js; do
+    node "$test"
+done
 ```
 
 The Diagnostics backend is covered by `tests/test_diagnostics.py`. Those tests must mock SSH execution so routine regression testing cannot contact a real ONT.
@@ -732,6 +744,10 @@ For authentication changes, test:
 - startup refusal for partial configuration
 - successful and failed authentication
 - `/api/health` remains reachable as intended
+- browser mode requires credentials and an HTTPS origin
+- remembered and ordinary session expiration, logout and revocation
+- same-origin checks, CSRF protection and login throttling
+- forwarded-header spoof resistance and explicit trusted-proxy handling
 
 For TLS changes, test verification enabled, verification disabled, invalid configuration, and custom CA-bundle handling as applicable.
 

@@ -1,6 +1,6 @@
 # Web Interface
 
-Phase 2 provides five coordinated pages:
+The dashboard provides five primary telemetry and administration pages:
 
 - **Dashboard** (`/`) — health overview, thermal gauges, optical and traffic monitoring, and recent alerts.
 - **Advanced** (`/advanced`) — detailed system and PON telemetry and historical charts.
@@ -10,6 +10,20 @@ Phase 2 provides five coordinated pages:
 
 The interface uses self-hosted HTML, CSS, and JavaScript. Historical charts retain their time-range controls, including the 60-minute view.
 
+
+## Optional Browser Authentication
+
+When `DASHBOARD_AUTH_MODE=browser`, visits without a valid session are
+redirected to **Login** (`/login`). The login page offers **Remember This
+Browser**, with 1-, 3-, 7-, 14- and 30-day durations (default: 7 days).
+
+Authenticated users can open **Trusted Browsers** (`/trusted-browsers`) to
+review their active sessions and expiration dates or revoke browser access.
+The current browser is marked. Revoking it or using **Sign out** requires a
+new login.
+
+These controls are not shown in HTTP Basic mode. Browser mode requires a
+server-configured HTTPS origin and a trusted HTTPS reverse proxy.
 
 ## Dashboard
 

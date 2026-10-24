@@ -209,26 +209,56 @@ Leave `REQUIRE_HTTPS` disabled for ordinary HTTP-only LAN deployments.
 
 ### Optional Dashboard Authentication
 
-The dashboard can optionally require HTTP Basic authentication.
+The dashboard offers two optional authentication modes. Authentication is
+**disabled** when both dashboard credential variables are unset.
 
-Authentication is disabled by default for trusted-LAN deployments.
+Set both variables to require authentication:
 
-To enable it, configure both:
+```text
+DASHBOARD_AUTH_USERNAME=admin
+DASHBOARD_AUTH_PASSWORD=use-a-strong-password
+```
 
-    DASHBOARD_AUTH_USERNAME=admin
-    DASHBOARD_AUTH_PASSWORD=use-a-strong-password
+Providing only one credential variable is rejected on startup.
 
-Both variables must be configured together. If only one is supplied,
-the application refuses to start.
+**HTTP Basic authentication** is the default (`DASHBOARD_AUTH_MODE=basic`).
+Existing installations retain their current authentication behaviour when
+they upgrade without changing this setting.
 
-HTTP Basic authentication must only be used over HTTPS on untrusted
-networks. Internet-facing deployments must still use a trusted HTTPS
-reverse proxy and must not expose the dashboard application port
-directly.
+**Browser authentication** adds a sign-in page, remembered sessions, Sign out,
+and a Trusted Browsers page. It requires an HTTPS reverse proxy and these
+additional environment variables:
 
-Users with access to the Docker or Unraid host may be able to inspect
-container environment variables. Protect the dashboard authentication
-password with the same care as `SSH_PASSWORD`.
+```text
+DASHBOARD_AUTH_MODE=browser
+DASHBOARD_PUBLIC_ORIGIN=https://dashboard.example.com
+```
+
+Replace the sample origin with the exact HTTPS address opened in the browser,
+including a port when applicable. An HTTPS origin must not contain a path,
+query string, fragment, or embedded username/password. The app validates the
+request host and origin for browser authentication. Ordinary HTTP cannot
+establish browser sessions.
+
+**Remember This Browser** offers 1, 3, 7, 14, or 30 days (default: 7 days).
+Without the option enabled, the cookie is nonpersistent and the server-enforced
+session expiry is 12 hours. The server always enforces expiry, and sessions
+can be revoked from Trusted Browsers.
+
+Login attempts are rate-limited after five failed attempts in a five-minute
+window for the apparent client. By default, clients behind the same reverse
+proxy share its login limit. `DASHBOARD_TRUSTED_PROXY_IPS` allows an optional
+explicit list of exact trusted reverse-proxy IP addresses for recognizing a
+single forwarded client address. Do not trust user-supplied forwarding headers
+or hardcode temporary Docker container IPs.
+
+Only hashes of bearer-session tokens are stored in the SQLite database.
+Session cookies are Secure, HttpOnly, and SameSite=Lax. Preserve and protect
+persistent `/data`, dashboard credentials, and HTTPS proxy configuration.
+
+See [Configuration](docs/configuration.md) and
+[Upgrade and Rollback](docs/upgrading.md) for more information.
+Never expose the application port directly to the public Internet.
 
 ## ONT Management Connectivity
 
@@ -329,7 +359,7 @@ For Unraid, the recommended mapping is:
 
 The dashboard continues to use the existing core `samples` and `advanced_samples` telemetry tables and automatically adds the database structures required for alert history and configuration.
 
-Existing telemetry history is preserved during upgrade.
+Existing telemetry history is preserved during upgrade. Enabling browser authentication creates a `browser_sessions` table in the same persistent SQLite database.
 
 ## Upgrading Existing Installations
 
@@ -353,6 +383,8 @@ The dashboard provides five coordinated pages:
 - **Alerts & Notifications** — alert thresholds,
   notification providers, and data retention.
 - **Alert History** — recorded events and pagination.
+
+When browser authentication is enabled, **Login** and **Trusted Browsers** are also available.
 
 For detailed descriptions of each page, see the
 [Web Interface Guide](docs/web-interface.md).

@@ -34,6 +34,44 @@ HTTP Basic authentication is supported on the local network, but passwords are t
 
 Do not expose the dashboard directly to the public Internet.
 
+## v3.9.0 — Remembered Browser Authentication
+
+The v3.9.0 image adds optional HTTPS browser authentication. Existing
+installations remain in HTTP Basic mode unless an administrator explicitly
+sets `DASHBOARD_AUTH_MODE=browser`; a Docker image update alone does not
+activate the new login experience.
+
+Before enabling browser authentication:
+
+1. Preserve the original container configuration and original Docker image.
+2. Take and verify a consistent SQLite backup of `/data/metrics.db` using
+   a separately approved procedure, without changing the normal Appdata
+   Backup plugin settings.
+3. Confirm that the intended hostname is served by a working, trusted HTTPS
+   reverse proxy.
+4. Preserve the existing `DASHBOARD_AUTH_USERNAME` and
+   `DASHBOARD_AUTH_PASSWORD` values.
+5. Set `DASHBOARD_AUTH_MODE=browser` and set `DASHBOARD_PUBLIC_ORIGIN`
+   to the exact browser-facing HTTPS origin.
+6. Recreate the container through its normal manager. Confirm the sign-in
+   page, remembered sessions, Sign out, and telemetry pages work.
+
+On Unraid, the two additional environment variables may need to be added
+manually when they are not present in the installed template.
+
+Browser authentication creates a `browser_sessions` table inside the same
+persistent SQLite database. Telemetry tables and data are not replaced.
+
+**Rollback:** Select the original image and restore Basic mode (remove
+`DASHBOARD_AUTH_MODE` or set it to `basic`). Retain the prior username,
+password, network, port binding and persistent `/data` path. Older images
+ignore the new browser-session table. Avoid restoring an older database
+unless a compatibility issue requires it: doing so loses telemetry written
+after the backup.
+
+`DASHBOARD_TRUSTED_PROXY_IPS` is optional. When unset, visitors through one
+reverse proxy share a rate-limit identity.
+
 ## Upgrading to the Non-Root Runtime
 
 The container runs as the unprivileged Unraid user `nobody:users` (UID 99 / GID 100) instead of root.
