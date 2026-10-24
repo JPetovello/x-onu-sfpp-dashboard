@@ -372,6 +372,9 @@ the relevant migration and permissions requirements.
 See the [Upgrade and Rollback Guide](docs/upgrading.md)
 for detailed instructions.
 
+For the v3.9.1 interface maintenance update, see the
+[v3.9.1 Release Notes](docs/v3.9.1-release-notes.md).
+
 ## Web Interface
 
 The dashboard provides five coordinated pages:

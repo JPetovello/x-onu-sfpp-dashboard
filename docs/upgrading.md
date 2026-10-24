@@ -34,6 +34,24 @@ HTTP Basic authentication is supported on the local network, but passwords are t
 
 Do not expose the dashboard directly to the public Internet.
 
+## v3.9.1 — Interface and Accessibility Maintenance
+
+v3.9.1 updates the dashboard's visual presentation and accessibility.
+It aligns Trusted Browsers with the redesigned interface and improves
+light-theme heading-label contrast.
+
+No database migration, environment-variable changes, port changes,
+or container-template changes are required.
+
+Preserve the existing container configuration and verified SQLite
+backup before updating. Keep the persistent `/data` mapping unchanged.
+
+For rollback, restore the previously working v3.9.0 Docker image
+without replacing the existing database unless separately required.
+A database restore can discard telemetry recorded afterward.
+
+See [v3.9.1 Release Notes](v3.9.1-release-notes.md).
+
 ## v3.9.0 — Remembered Browser Authentication
 
 The v3.9.0 image adds optional HTTPS browser authentication. Existing
