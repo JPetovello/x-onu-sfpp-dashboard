@@ -12,6 +12,28 @@ The browser interface is organized around three telemetry views:
 
 Alert, notification, and retention settings remain on the separate **Alerts & Notifications** page.
 
+## Quick Start (TL;DR)
+
+**Prerequisite:** An X-ONU-SFPP or compatible ONT running 8311 community firmware. Your Docker or Unraid host must be able to reach the ONT management IP.
+
+### Unraid
+
+1. In **Apps**, find and install **X-ONU-SFPP Dashboard** using the [Unraid template](https://github.com/JPetovello/unraid-templates/blob/main/templates/x-onu-sfpp-dashboard.xml).
+2. Verify the **ONT Metrics URL** and persistent **Appdata** mapping.
+3. Click **Apply**, then open `http://YOUR-UNRAID-IP:8766` (or your configured host port).
+
+### Docker
+
+1. In the [Docker Installation](#docker-installation) command below, set `ONT_URL` to your ONT's metrics endpoint and map `/data` to persistent storage.
+2. Run the command to start the container.
+3. Open `http://YOUR-DOCKER-HOST-IP:8766` (or your configured host port).
+
+The default metrics endpoint is `https://192.168.11.1/cgi-bin/luci/8311/metrics`. Change it if your ONT uses a different management address.
+
+**Optional:** SSH telemetry adds advanced monitoring and on-demand diagnostics. The [UCG Fiber management helper](docs/ucg-fiber-ont-management.md) is not required if your ONT is already reachable.
+
+**Security:** Keep the dashboard on a trusted network. Do not expose its application port directly to the public Internet.
+
 ## Features
 
 Core telemetry does not require SSH and includes:
