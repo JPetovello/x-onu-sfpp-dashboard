@@ -1,5 +1,22 @@
-.trusted-panel {
-    margin-top: 24px;
+/* Match the approved Phase 2 page layout */
+body.xonu-trusted-browsers .shell {
+    width: min(1376px, calc(100% - 48px));
+    padding: 28px 0 50px;
+}
+
+body.xonu-trusted-browsers h1 {
+    font-size: clamp(30px, 4vw, 43px);
+    line-height: 1.1;
+}
+
+body.xonu-trusted-browsers .topbar {
+    margin-bottom: 26px;
+}
+
+body.xonu-trusted-browsers .section-block {
+    padding: 24px;
+    border-radius: 17px;
+    background: var(--panel);
 }
 
 .trusted-heading {
@@ -101,5 +118,16 @@
     .trusted-session button {
         align-self: stretch;
         min-height: 44px;
+    }
+}
+
+/* Match Phase 2 mobile page spacing */
+@media (max-width: 680px) {
+    body.xonu-trusted-browsers .shell {
+        width: calc(100% - 28px);
+    }
+
+    body.xonu-trusted-browsers .section-block {
+        padding: 16px;
     }
 }

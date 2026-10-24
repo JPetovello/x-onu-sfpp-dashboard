@@ -7,18 +7,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class TrustedBrowsersLayoutTests(unittest.TestCase):
 
-    def test_shared_dashboard_width(self):
-        local = (ROOT / "static/trusted_browsers.css").read_text()
-        shared = (ROOT / "static/style.css").read_text()
+    def test_phase2_page_layout(self):
+        local = (
+            ROOT / "static/trusted_browsers.css"
+        ).read_text()
 
-        self.assertNotRegex(
+        self.assertIn(
+            "width: min(1376px, calc(100% - 48px));",
             local,
-            r"body\.xonu-trusted-browsers\s+\.shell\s*\{",
         )
-        self.assertRegex(
-            shared,
-            r"(?s)\.shell\s*\{[^}]*1180px",
+        self.assertIn(
+            "font-size: clamp(30px, 4vw, 43px);",
+            local,
         )
+        self.assertIn("padding: 28px 0 50px;", local)
+        self.assertIn("margin-bottom: 26px;", local)
+        self.assertIn("width: calc(100% - 28px);", local)
 
     def test_theme_selector_present(self):
         html = (
