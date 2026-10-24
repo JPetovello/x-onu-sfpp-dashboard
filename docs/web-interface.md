@@ -22,6 +22,11 @@ review their active sessions and expiration dates or revoke browser access.
 The current browser is marked. Revoking it or using **Sign out** requires a
 new login.
 
+Trusted Browsers uses the same redesigned 1376px maximum page width,
+compact header, navigation styling, and theme controls as the main
+dashboard pages. Session cards adapt to narrow screens, placing
+full-width revoke buttons beneath their corresponding session details.
+
 These controls are not shown in HTTP Basic mode. Browser mode requires a
 server-configured HTTPS origin and a trusted HTTPS reverse proxy.
 

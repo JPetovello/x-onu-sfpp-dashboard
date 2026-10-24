@@ -80,6 +80,22 @@ at most 32 stored sessions.
 Authentication coverage includes `tests/test_browser_auth.py`,
 `tests/test_browser_sessions.py`, `tests/test_browser_client.js`,
 `tests/test_login_duration.js`, and `tests/test_trusted_browsers.js`.
+Visual-layout regression coverage includes
+`tests/test_trusted_browsers_layout.py`.
+
+Trusted Browsers uses the redesigned page layout, with a 1376px maximum
+shell width, compact heading, theme selector, and responsive session
+cards. Light-theme eyebrow text uses a darker blue for improved contrast.
+
+A static-template accessibility audit covered seven pages in desktop
+and mobile layouts, using Dark and Light themes. All 28 axe-core scans
+reported zero violations. Fourteen narrow-screen and initial
+keyboard-focus checks also passed. Four visual geometry comparisons
+against Alert History passed at desktop and mobile widths.
+
+These automated checks do not establish full WCAG 2.2 AA conformance.
+Dynamic interactions and assistive-technology operation require
+additional testing.
 
 ### `advanced.py`
 

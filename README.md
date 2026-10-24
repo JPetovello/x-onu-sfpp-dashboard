@@ -386,6 +386,11 @@ The dashboard provides five coordinated pages:
 
 When browser authentication is enabled, **Login** and **Trusted Browsers** are also available.
 
+Trusted Browsers follows the redesigned dashboard layout, including the
+standard header, navigation, and System/Dark/Light theme selector.
+On narrow screens, browser-session details and revoke buttons stack
+vertically for easier interaction.
+
 For detailed descriptions of each page, see the
 [Web Interface Guide](docs/web-interface.md).
 
