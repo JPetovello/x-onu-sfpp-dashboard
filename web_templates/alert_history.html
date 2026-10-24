@@ -17,6 +17,9 @@
     rel="stylesheet"
     href="/static/style.css">
 <link rel="stylesheet" href="/static/alert_history.css">
+{% if browser_auth_enabled %}
+<script src="/static/browser_client.js"></script>
+{% endif %}
 </head>
 
 <body class="xonu-alert-history">

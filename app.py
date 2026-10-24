@@ -15,6 +15,7 @@ from flask import Flask, Response, jsonify, render_template, request
 
 from advanced import AdvancedCollector
 from retention import RetentionManager
+from browser_auth import BrowserAuth
 
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
@@ -104,13 +105,61 @@ def load_dashboard_auth():
 ) = load_dashboard_auth()
 
 
+def load_dashboard_auth_mode():
+    mode = os.environ.get(
+        "DASHBOARD_AUTH_MODE", "basic"
+    ).strip().lower()
+
+    if mode not in {"basic", "browser"}:
+        raise RuntimeError(
+            "DASHBOARD_AUTH_MODE must be basic or browser"
+        )
+
+    if mode == "browser" and not (
+        DASHBOARD_AUTH_USERNAME and DASHBOARD_AUTH_PASSWORD
+    ):
+        raise RuntimeError(
+            "Browser authentication requires dashboard credentials"
+        )
+
+    return mode
+
+
+DASHBOARD_AUTH_MODE = load_dashboard_auth_mode()
+
 app = Flask(__name__, template_folder="web_templates")
+
+if DASHBOARD_AUTH_MODE == "browser":
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    browser_auth = BrowserAuth(
+        DB_PATH,
+        os.environ.get("DASHBOARD_PUBLIC_ORIGIN", ""),
+        DASHBOARD_AUTH_USERNAME,
+        DASHBOARD_AUTH_PASSWORD,
+    )
+else:
+    browser_auth = None
+
+if browser_auth is not None:
+    browser_auth.install(app)
+
+
+@app.context_processor
+def browser_auth_template_context():
+    return {
+        "browser_auth_enabled":
+            DASHBOARD_AUTH_MODE == "browser"
+    }
 
 
 @app.before_request
 def require_dashboard_auth():
     if request.path == "/api/health":
         return None
+
+    if DASHBOARD_AUTH_MODE == "browser":
+        return browser_auth.check_request()
 
     if not (
         DASHBOARD_AUTH_USERNAME

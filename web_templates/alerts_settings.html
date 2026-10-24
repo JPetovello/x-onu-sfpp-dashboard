@@ -17,6 +17,9 @@
     rel="stylesheet"
     href="/static/style.css?v=tx-profile-ui-2">
 <link rel="stylesheet" href="/static/alerts_settings.css">
+{% if browser_auth_enabled %}
+<script src="/static/browser_client.js"></script>
+{% endif %}
 </head>
 
 <body class="xonu-alerts">

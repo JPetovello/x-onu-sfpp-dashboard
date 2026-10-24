@@ -47,4 +47,21 @@
         Alert History
     </a>
 
+    {% if browser_auth_enabled %}
+    <a
+        href="/trusted-browsers"
+        class="settings-nav-link"
+        {% if active_page == "sessions" %}
+        aria-current="page"
+        {% endif %}>
+        Trusted Browsers
+    </a>
+
+    <button
+        id="xonuLogoutButton"
+        class="settings-nav-link xonu-logout-button"
+        type="button">
+        Sign out
+    </button>
+    {% endif %}
 </nav>

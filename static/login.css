@@ -1,0 +1,134 @@
+body.xonu-login {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.login-shell {
+    width: min(100%, 450px);
+}
+
+.login-card {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--panel);
+    padding: clamp(25px, 6vw, 42px);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .20);
+}
+
+.login-card h1 {
+    font-size: clamp(29px, 6vw, 39px);
+    letter-spacing: -.04em;
+}
+
+.login-description {
+    color: var(--muted);
+    margin: 10px 0 30px;
+}
+
+#loginForm {
+    display: grid;
+    gap: 11px;
+}
+
+#loginForm > label:not(.remember-choice) {
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 8px;
+}
+
+#loginForm > input {
+    width: 100%;
+    padding: 13px 14px;
+    background: var(--panel-alt);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font: inherit;
+}
+
+#loginForm > input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.remember-choice {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-top: 13px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.remember-choice input {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--accent);
+}
+
+.login-note {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 8px 28px;
+    line-height: 1.5;
+}
+
+.login-error {
+    color: var(--bad);
+    font-size: 13px;
+    margin: 4px 0;
+}
+
+.login-error[hidden] {
+    display: none;
+}
+
+#loginSubmit {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    background: var(--button-active-bg);
+    color: var(--text);
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+#loginSubmit:hover {
+    border-color: var(--button-active-text);
+}
+
+#loginSubmit:disabled {
+    opacity: .65;
+    cursor: wait;
+}
+
+.login-footer {
+    text-align: center;
+    margin: 27px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+
+#rememberDays {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--panel-alt);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font: inherit;
+}
+
+#rememberDays:disabled {
+    opacity: .45;
+}
+
+#rememberDays:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}

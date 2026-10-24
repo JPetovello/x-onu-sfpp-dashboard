@@ -11,3 +11,8 @@ LICENSE
 tests/
 DEVELOPMENT.md
 requirements.in
+
+# Local Python development environments
+.test-venv/
+.venv/
+venv/

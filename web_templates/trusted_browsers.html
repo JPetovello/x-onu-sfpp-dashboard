@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trusted Browsers — X-ONU-SFPP Dashboard</title>
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/trusted_browsers.css">
+<script src="/static/browser_client.js"></script>
+<script src="/static/trusted_browsers.js" defer></script>
+</head>
+<body class="xonu-trusted-browsers">
+<main class="shell">
+<header class="topbar">
+    <div>
+        <p class="eyebrow">XGS-PON TELEMETRY</p>
+        <h1>X-ONU-SFPP</h1>
+        <p class="subtitle">Trusted Browsers</p>
+        {% include "_page_nav.html" %}
+    </div>
+</header>
+
+<section class="section-block trusted-panel">
+    <div class="trusted-heading">
+        <div>
+            <p class="eyebrow">ACCESS SECURITY</p>
+            <h2>Active browser sessions</h2>
+        </div>
+        <button id="refreshSessions" type="button">
+            Refresh
+        </button>
+    </div>
+
+    <p class="trusted-intro">
+        Review browsers signed in to your dashboard.
+        Revoke a session to require that browser to sign in again.
+        A browser label is not proof of the physical device's identity.
+    </p>
+
+    <p id="trustedStatus" role="status" aria-live="polite">
+        Loading active sessions…
+    </p>
+
+    <div id="trustedBrowserList" class="trusted-list"></div>
+</section>
+</main>
+</body>
+</html>

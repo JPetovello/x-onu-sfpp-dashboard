@@ -22,6 +22,8 @@ COPY alerts.py .
 COPY tx_health.py .
 COPY notifications.py .
 COPY retention.py .
+COPY browser_auth.py .
+COPY browser_sessions.py .
 COPY web_templates ./web_templates
 COPY static ./static
 

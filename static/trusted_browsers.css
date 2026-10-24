@@ -1,0 +1,89 @@
+body.xonu-trusted-browsers .shell {
+    width: min(980px, calc(100% - 32px));
+}
+
+.trusted-panel {
+    margin-top: 24px;
+}
+
+.trusted-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.trusted-heading h2 {
+    margin: 0;
+}
+
+.trusted-intro {
+    max-width: 720px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+#trustedStatus {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.trusted-list {
+    display: grid;
+    gap: 12px;
+}
+
+.trusted-session {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel-alt);
+    padding: 18px;
+}
+
+.trusted-session-details {
+    min-width: 0;
+    flex: 1;
+    overflow-wrap: anywhere;
+}
+
+.trusted-session-title {
+    display: block;
+    font-weight: 750;
+    margin-bottom: 8px;
+}
+
+.trusted-session-meta {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.trusted-session button,
+#refreshSessions {
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--button-bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.trusted-session button:hover,
+#refreshSessions:hover {
+    border-color: var(--accent);
+}
+
+.trusted-session button:disabled,
+#refreshSessions:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}

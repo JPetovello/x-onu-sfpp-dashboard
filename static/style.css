@@ -2449,3 +2449,19 @@ footer {
     }
 
 }
+
+
+/* Optional browser-authentication navigation */
+
+.xonu-logout-button {
+    background: transparent;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.xonu-logout-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
