@@ -1,7 +1,3 @@
-body.xonu-trusted-browsers .shell {
-    width: min(980px, calc(100% - 32px));
-}
-
 .trusted-panel {
     margin-top: 24px;
 }
@@ -86,4 +82,24 @@ body.xonu-trusted-browsers .shell {
 #refreshSessions:disabled {
     opacity: 0.6;
     cursor: wait;
+}
+
+/* Trusted Browsers mobile session layout */
+
+@media (max-width: 600px) {
+    .trusted-session {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .trusted-session-details {
+        flex: 0 1 auto;
+        width: 100%;
+    }
+
+    .trusted-session button {
+        align-self: stretch;
+        min-height: 44px;
+    }
 }

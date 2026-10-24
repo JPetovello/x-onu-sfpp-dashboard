@@ -167,6 +167,11 @@ body {
         0 0 8px;
 }
 
+/* Accessible heading accent in light theme */
+:root[data-theme="light"] .eyebrow {
+    color: #205b9e;
+}
+
 
 h1 {
     margin: 0;
