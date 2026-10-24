@@ -4,7 +4,7 @@ The **Alert Settings** panel on the **Alerts & Notifications** page controls whe
 
 Changing an alert severity does not change when the condition is detected. It changes how the resulting event is classified. Available severities are **Info**, **Warning**, and **Critical**.
 
-The defaults are intended to provide useful monitoring without generating an alert for every small fluctuation. They can be adjusted for the optical levels and behavior normally seen on a particular ONT or network.
+The defaults are intended to provide useful monitoring without generating an alert for every small fluctuation. They can be adjusted for the optical levels and behaviour normally seen on a particular ONT or network.
 
 ## Warning Debounce
 
@@ -61,7 +61,7 @@ Operational states are:
 
 The following profiles are available:
 
-**Legacy** preserves the original dashboard behavior exactly. It is the default for fresh installations and for an existing saved configuration that still matches the original defaults:
+**Legacy** preserves the original dashboard behaviour exactly. It is the default for fresh installations and for an existing saved configuration that still matches the original defaults:
 
     Low alarm:     1 dBm
     Low warning:   2 dBm
@@ -77,7 +77,7 @@ Legacy retains the historical GOOD / FAIR / POOR display wording. GREAT is only 
     Operating maximum: 9.00 dBm
     Warning bands:     None
 
-Its behavior is:
+Its behaviour is:
 
     TX < 4.00 dBm         ALARM / OUT OF SPEC
     4.00 <= TX <= 9.00   NORMAL
@@ -265,7 +265,7 @@ Recovery events default to **Info** where a separate recovery severity is availa
 
 Alert generation and notification delivery are separate operations.
 
-The dashboard provides a dedicated **Alerts & Notifications** page for configuring alert behavior and external notification delivery. The main dashboard continues to display **Recent Alerts** without using space for configuration controls.
+The dashboard provides a dedicated **Alerts & Notifications** page for configuring alert behaviour and external notification delivery. The main dashboard continues to display **Recent Alerts** without using space for configuration controls.
 
 **Alert Settings** determine whether an event is generated and the severity assigned to it.
 

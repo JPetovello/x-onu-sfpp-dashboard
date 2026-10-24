@@ -1,12 +1,12 @@
-# X-ONU Dashboard Development Guide
+# X-ONU-SFPP Dashboard Development Guide
 
-This document describes the internal architecture and development workflow for X-ONU Dashboard.
+This document describes the internal architecture and development workflow for X-ONU-SFPP Dashboard.
 
 For installation, configuration, supported features, alert settings, notification providers, normal operation, and user-facing UCG Fiber helper instructions, see [README.md](README.md).
 
 ## Architecture Overview
 
-X-ONU Dashboard is a Flask application with two independent telemetry collection paths:
+X-ONU-SFPP Dashboard is a Flask application with two independent telemetry collection paths:
 
 ```text
 8311 JSON metrics endpoint ──> Core Collector ────────┐
@@ -62,7 +62,7 @@ Because collectors are started within the application process, the production Gu
 
 Threads may still be used within that single process for HTTP handling and background work.
 
-Core telemetry exposed to browser-facing JSON must be JSON-safe. Non-numeric or non-finite values such as `NaN` and `Infinity` must not be allowed to poison API responses. Preserve the current normalization behavior when changing parsing or API serialization.
+Core telemetry exposed to browser-facing JSON must be JSON-safe. Non-numeric or non-finite values such as `NaN` and `Infinity` must not be allowed to poison API responses. Preserve the current normalization behaviour when changing parsing or API serialization.
 
 ### `advanced.py`
 
@@ -122,10 +122,10 @@ Responsibilities include:
 
 - Alert configuration
 - Threshold evaluation
-- Warning debounce behavior
+- Warning debounce behaviour
 - Severity assignment
 - Counter-delta alerts
-- Counter cooldown behavior
+- Counter cooldown behaviour
 - Recovery events
 - Alert history persistence
 - Runtime-state persistence across restarts
@@ -154,7 +154,7 @@ Configuration changes deliberately rebaseline the affected policy state instead 
 
 PLOAM health must be evaluated against the configured operational state rather than a separate browser hard-coded value.
 
-The default operational state is `51`, but both server and browser behavior must consume the configured value so installations using a different valid operational state remain consistent.
+The default operational state is `51`, but both server and browser behaviour must consume the configured value so installations using a different valid operational state remain consistent.
 
 #### TX health profiles
 
@@ -216,7 +216,7 @@ RX, thermal, reachability, active-alarm, GEM, and counter state must not be rese
 
 TX classification and state-transition processing are held under the same re-entrant manager lock used when activating and re-baselining a changed TX policy. Preserve this atomic boundary; otherwise a collector sample could be classified under one policy and processed after another policy becomes active.
 
-Unversioned saved configurations are normalized in memory. Exact original defaults become `legacy`; user-edited values become `custom`. Version 2 Legacy and Custom configurations gain disabled operating-envelope fields without changing their thresholds. A version 2 `xgsponst2001-a01` configuration becomes Custom in memory so its former `2.00/3.00 dBm` behavior is preserved rather than silently adopting the new specification policy. The stored row is not rewritten merely because the application loaded it. An explicit settings save persists schema version `4`. Do not infer migration consent from values that happen to match a default.
+Unversioned saved configurations are normalized in memory. Exact original defaults become `legacy`; user-edited values become `custom`. Version 2 Legacy and Custom configurations gain disabled operating-envelope fields without changing their thresholds. A version 2 `xgsponst2001-a01` configuration becomes Custom in memory so its former `2.00/3.00 dBm` behaviour is preserved rather than silently adopting the new specification policy. The stored row is not rewritten merely because the application loaded it. An explicit settings save persists schema version `4`. Do not infer migration consent from values that happen to match a default.
 
 #### Independent thermal monitoring — Phase 2
 
@@ -250,7 +250,7 @@ New alert events are placed into a bounded FIFO notification queue. When the que
 
 The notification worker processes events separately so a slow, unreachable, or incorrectly configured notification service cannot block telemetry collection.
 
-Notification destinations are treated as untrusted network input. Preserve the current SSRF protections and destination validation when adding providers or changing request behavior.
+Notification destinations are treated as untrusted network input. Preserve the current SSRF protections and destination validation when adding providers or changing request behaviour.
 
 Provider failures should remain contained within the notification subsystem.
 
@@ -314,7 +314,7 @@ The trusted key is stored in:
 
 After a key has been saved, future connections require the ONT to present the same host key.
 
-Do not change this behavior to automatically accept replacement keys. A changed host key should require deliberate intervention rather than silently replacing the trusted key.
+Do not change this behaviour to automatically accept replacement keys. A changed host key should require deliberate intervention rather than silently replacing the trusted key.
 
 ## Dashboard Authentication
 
@@ -346,7 +346,7 @@ ONT_TLS_VERIFY
 ONT_TLS_CA_BUNDLE
 ```
 
-Do not replace the configurable verification behavior with a global `verify=False` or another unconditional certificate bypass.
+Do not replace the configurable verification behaviour with a global `verify=False` or another unconditional certificate bypass.
 
 When verification is enabled, certificate failures should remain visible as collection failures rather than being silently ignored.
 
@@ -417,7 +417,7 @@ The application exposes APIs for areas including:
 
 Alert history supports `limit` and `offset` so the browser can paginate stored events without loading the entire retained history.
 
-Pagination inputs must remain bounded. Large user-controlled offsets or limits must not be allowed to create unbounded work or pathological database behavior.
+Pagination inputs must remain bounded. Large user-controlled offsets or limits must not be allowed to create unbounded work or pathological database behaviour.
 
 History endpoints downsample in SQL when appropriate instead of loading an arbitrarily large retained dataset into Python and reducing it afterward. Preserve this property when changing chart history queries.
 
@@ -439,7 +439,7 @@ The supported profile names are:
 
 Each profile maps to fixed server-side SSH commands. User-controlled command text, executable paths, and `pontop` page names must never reach the SSH execution layer. Unknown profiles and malformed request bodies are rejected before SSH execution. GET does not execute Diagnostics.
 
-Bundled diagnostic profiles use shell fail-fast behavior so an individual `pontop` failure cannot be hidden by a later successful command in the same profile.
+Bundled diagnostic profiles use shell fail-fast behaviour so an individual `pontop` failure cannot be hidden by a later successful command in the same profile.
 
 Only one diagnostic operation may run at a time per process. The collector acquires its diagnostics-only guard non-blockingly and always releases it after success or failure. A concurrent request receives `409 Conflict`; it does not wait and does not affect background collection.
 
@@ -478,10 +478,10 @@ static/
 
 Important JavaScript files include:
 
-- `dashboard.js` — shared Dashboard and Advanced telemetry/UI behavior
+- `dashboard.js` — shared Dashboard and Advanced telemetry/UI behaviour
 - `tx_health.js` — pure browser-side TX classification
 - `diagnostics.js` — manual, profile-scoped Diagnostics requests and safe raw-output rendering
-- `alerts.js` — alert and notification settings interface behavior
+- `alerts.js` — alert and notification settings interface behaviour
 - `alert_history.js` — paginated alert-history interface
 - `theme.js` — theme selection and persistence
 - `thermal_gauges.js` — independent optical module and CPU gauge visualization
@@ -509,7 +509,7 @@ HTML templates provide the corresponding pages and reusable content.
 
 The frontend should consume the Flask API rather than duplicating server-side monitoring logic in the browser.
 
-Browser display logic must not silently diverge from server-side operational policy. Shared behaviors such as TX classification and configured PLOAM operational state require parity tests when changed.
+Browser display logic must not silently diverge from server-side operational policy. Shared behaviours such as TX classification and configured PLOAM operational state require parity tests when changed.
 
 Untrusted server or persisted text must be inserted with text-safe DOM operations unless the content is explicitly static and trusted.
 
@@ -528,7 +528,7 @@ These operations are intended to continue whether or not a user has the dashboar
 
 On-demand Diagnostics are intentionally **not** background processing. They run only for an explicit diagnostic request and must not be added to the normal polling loop.
 
-When changing startup or threading behavior, verify that a change cannot accidentally start duplicate collectors or duplicate notification processing.
+When changing startup or threading behaviour, verify that a change cannot accidentally start duplicate collectors or duplicate notification processing.
 
 ## Optional UCG Fiber ONT-Management Helper
 
@@ -548,7 +548,7 @@ The helper is deliberately separate from the dashboard runtime:
 - helper failure must not be treated as a dashboard application failure
 - installing or removing the helper is an explicit administrator action
 
-The helper scripts are unofficial community examples. UniFi OS behavior can change between releases, so networking commands and interface assumptions must be treated cautiously.
+The helper scripts are unofficial community examples. UniFi OS behaviour can change between releases, so networking commands and interface assumptions must be treated cautiously.
 
 When changing these scripts:
 
@@ -558,7 +558,7 @@ When changing these scripts:
 4. Keep installation and removal steps reversible.
 5. Validate POSIX shell syntax.
 6. Keep Linux/macOS and Windows installation documentation aligned with the actual files in `examples/ucg-fiber/`.
-7. Do not make the dashboard container depend on UCG Fiber-specific behavior.
+7. Do not make the dashboard container depend on UCG Fiber-specific behaviour.
 
 Detailed user instructions belong in [docs/ucg-fiber-ont-management.md](docs/ucg-fiber-ont-management.md) and [examples/ucg-fiber/README.md](examples/ucg-fiber/README.md), not in the runtime architecture sections of this document.
 
@@ -604,7 +604,7 @@ Container replacement and application upgrades should not destroy telemetry hist
 
 ### Existing installations matter
 
-Database initialization, retention migration, and configuration changes should avoid silently changing established behavior.
+Database initialization, retention migration, and configuration changes should avoid silently changing established behaviour.
 
 ### Browser-facing data must be safe
 
@@ -616,11 +616,11 @@ Notification URLs and similar outbound destinations must preserve SSRF protectio
 
 ### Optional helpers stay optional
 
-UCG Fiber helper scripts are separate from dashboard runtime behavior. Do not introduce a dependency from the core application onto platform-specific gateway modifications.
+UCG Fiber helper scripts are separate from dashboard runtime behaviour. Do not introduce a dependency from the core application onto platform-specific gateway modifications.
 
-### ONT behavior should be verified against hardware
+### ONT behaviour should be verified against hardware
 
-Some advanced parsing and GEM-selection behavior depends on actual 8311 firmware and `pontop` output. Avoid replacing hardware-tested behavior based only on assumptions about how an ONT should report data.
+Some advanced parsing and GEM-selection behaviour depends on actual 8311 firmware and `pontop` output. Avoid replacing hardware-tested behaviour based only on assumptions about how an ONT should report data.
 
 ## Building Locally
 
@@ -655,12 +655,12 @@ A safe development workflow is:
 2. Make changes in the source checkout rather than inside the production container.
 3. Build a separate development image.
 4. Run it with a separate container name, port, and persistent data directory.
-5. Test against the intended ONT and 8311 firmware behavior when hardware interaction is relevant.
-6. Test security and failure behavior appropriate to the changed subsystem.
+5. Test against the intended ONT and 8311 firmware behaviour when hardware interaction is relevant.
+6. Test security and failure behaviour appropriate to the changed subsystem.
 7. Review the Git diff before committing.
 8. Do not replace the production container until the change has been validated.
 
-For documentation-only changes, verify that the diff contains only Markdown, comments, or docstrings and does not alter executable behavior.
+For documentation-only changes, verify that the diff contains only Markdown, comments, or docstrings and does not alter executable behaviour.
 
 Changes to UCG Fiber helper scripts should be treated as networking/system-script changes rather than ordinary dashboard frontend changes. Do not test an unreviewed helper change against a production WAN path merely to validate syntax.
 
@@ -739,17 +739,17 @@ For notification changes, test queue bounds, provider failure isolation, and SSR
 
 For alert changes, test restart persistence, policy rebaselining, configured PLOAM operational state, and browser/server classification parity where applicable.
 
-For history changes, test SQL-side downsampling and bounded pagination behavior.
+For history changes, test SQL-side downsampling and bounded pagination behaviour.
 
 For retention changes, test both valid configuration and corrupt/invalid saved configuration.
 
-For changes involving collectors, alerts, retention, notifications, authentication, TLS, or helper scripts, test both normal operation and failure behavior. A failure in an optional subsystem should not unexpectedly stop unrelated monitoring.
+For changes involving collectors, alerts, retention, notifications, authentication, TLS, or helper scripts, test both normal operation and failure behaviour. A failure in an optional subsystem should not unexpectedly stop unrelated monitoring.
 
 ## Project Scope
 
-X-ONU Dashboard is primarily developed and hardware-tested against the EXEN X-ONU-SFPP and compatible ONTs running 8311 community firmware.
+X-ONU-SFPP Dashboard is primarily developed and hardware-tested against the EXEN X-ONU-SFPP and compatible ONTs running 8311 community firmware.
 
-Compatibility changes for other hardware or firmware should avoid breaking behavior already validated on the project's primary supported platform.
+Compatibility changes for other hardware or firmware should avoid breaking behaviour already validated on the project's primary supported platform.
 
 The UCG Fiber helper is platform-specific optional tooling and should not narrow the dashboard application's broader ability to run anywhere that can reach the ONT management interface.
 

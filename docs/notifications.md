@@ -63,7 +63,7 @@ To enable Pushover notifications:
 5. Enable Pushover notifications.
 6. Save the settings.
 
-Critical dashboard alerts use Pushover priority `1`. Emergency priority `2` is intentionally not used because it requires retry and expiration parameters and has different acknowledgement behavior.
+Critical dashboard alerts use Pushover priority `1`. Emergency priority `2` is intentionally not used because it requires retry and expiration parameters and has different acknowledgement behaviour.
 
 ## Generic Webhook
 

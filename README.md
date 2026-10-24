@@ -1,4 +1,4 @@
-# X-ONU Dashboard
+# X-ONU-SFPP Dashboard
 
 A lightweight monitoring dashboard for the EXEN X-ONU-SFPP and compatible ONTs running 8311 community firmware.
 
@@ -10,7 +10,7 @@ The browser interface is organized around three telemetry views:
 - **Advanced** — detailed system health, PON error counters, historical charts, and module information.
 - **Diagnostics** — explicit, on-demand troubleshooting using fixed SSH diagnostic profiles. Diagnostics do not run automatically when the page is opened.
 
-Alert, notification, and retention configuration remains on the separate **Alerts & Notifications** page.
+Alert, notification, and retention settings remain on the separate **Alerts & Notifications** page.
 
 ## Features
 
@@ -25,7 +25,7 @@ Core telemetry does not require SSH and includes:
 - PLOAM state
 - ONT reachability
 - Historical optical and temperature charts
-- 1 hour, 6 hour, 24 hour, 7 day, and 30 day history
+- History ranges of 1 hour, 6 hours, 24 hours, 7 days, and 30 days
 - Persistent history-range selection
 - Configurable telemetry and alert-history retention
 
@@ -69,7 +69,7 @@ Alert monitoring includes:
 - Corrected and uncorrected FS HEC errors
 - PLOAM MIC errors
 
-Alert thresholds, severities, debounce behavior, minimum counter deltas, and counter cooldowns can be configured from the dedicated **Alerts & Notifications** page.
+Alert thresholds, severities, debounce behaviour, minimum counter deltas, and counter cooldowns can be configured from the dedicated **Alerts & Notifications** page.
 
 Warning conditions can require multiple consecutive samples before an alert is generated. Critical conditions can be reported immediately.
 
@@ -78,7 +78,7 @@ Counter alerts are based on increases rather than simply whether a lifetime coun
 ### Alert Settings Reference
 
 For detailed alert thresholds, severity rules, warning debounce,
-counter cooldowns, recovery events, and notification behavior,
+counter cooldowns, recovery events, and notification behaviour,
 see the [Alert Settings Reference](docs/alerts.md).
 
 ### Recent Alerts and Alert History
@@ -152,7 +152,7 @@ Existing installations preserve their effective telemetry retention setting duri
 
 ## Requirements
 
-An ONT running compatible 8311 community firmware with the metrics endpoint available at:
+You need an ONT running compatible 8311 community firmware with the metrics endpoint available at:
 
     /cgi-bin/luci/8311/metrics
 
@@ -353,7 +353,7 @@ Alert thresholds and the active TX profile are configurable through **Alert Sett
 
 ## Unraid
 
-X-ONU Dashboard is designed to run as a Docker container on Unraid.
+X-ONU-SFPP Dashboard is designed to run as a Docker container on Unraid.
 
 Recommended configuration:
 
@@ -386,6 +386,6 @@ This project was developed with substantial assistance from AI-based coding tool
 
 ## License
 
-X-ONU Dashboard is licensed under the GNU Affero General Public License version 3 or later (AGPL-3.0-or-later).
+X-ONU-SFPP Dashboard is licensed under the GNU Affero General Public License version 3 or later (AGPL-3.0-or-later).
 
 Copyright (c) 2026 Jeff Petovello

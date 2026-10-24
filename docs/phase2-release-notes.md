@@ -1,10 +1,10 @@
 # Phase 2 — Release Notes
 
-Status: **Pre-release / not yet published**
+Status: **Released as `v3.8.0`**
 
 Starting release: `v3.7.0`
 
-The final release version and publication date will be set when the maintainer approves the release.
+This document describes the Phase 2 changes published in `v3.8.0`.
 
 ## Interface
 

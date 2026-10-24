@@ -9,7 +9,7 @@
 >
 > These files are **unofficial community examples**. They are **not supported or
 > endorsed by Ubiquiti, EXEN, the 8311 community, or the X-ONU-SFPP Dashboard
-> project**. UniFi OS behavior can change between releases.
+> project**. UniFi OS behaviour can change between releases.
 >
 > **Do not copy and run these scripts blindly.** Verify the interface name,
 > management subnet, ONT address, and gateway-side management address for your
@@ -76,7 +76,7 @@ Before enabling them:
 
 - Verify the physical ONT/SFP+ interface on your gateway.
 - Verify the ONT management subnet and an unused gateway address.
-- Check for conflicting routes, addresses, files and services.
+- Check for conflicting routes, addresses, files, and services.
 - Confirm a compatible persistent boot-hook mechanism is installed.
 - Have a local or console recovery method available.
 - Inspect the gateway using read-only commands such as

@@ -49,7 +49,7 @@ address removal has not yet been verified with this version.
 These protections reduce risk but cannot guarantee that
 an incorrectly configured gateway will remain operational.
 
-See examples/ucg-fiber/README.md for installation,
+See the [UCG Fiber example guide](../examples/ucg-fiber/README.md) for installation,
 verification, recovery, and removal instructions.
 
 ## The dashboard does not require a UCG Fiber script
